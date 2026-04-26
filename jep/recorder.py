@@ -3,39 +3,48 @@
 """
 
 import functools
-import json
-from typing import Callable, Any, Optional
-from jep.primitives import judge, verify, terminate
+from typing import Any, Callable, Optional
+
 from jep.core.chain import AuditChain
+from jep.primitives import judge, terminate, verify
 
 
 class TraceManager:
     def __init__(self):
         self.chain: Optional[AuditChain] = None
         self.enabled = False
-    
-    def enable(self, issuer: str = "agent:default", private_key=None, storage_path: Optional[str] = None):
-        self.chain = AuditChain(issuer=issuer, private_key=private_key, storage_path=storage_path)
+
+    def enable(
+        self,
+        issuer: str = "agent:default",
+        private_key=None,
+        storage_path: Optional[str] = None,
+    ):
+        self.chain = AuditChain(
+            issuer=issuer,
+            private_key=private_key,
+            storage_path=storage_path,
+        )
         self.enabled = True
-    
+
     def disable(self):
         self.enabled = False
-    
+
     def view(self):
         if not self.chain or not self.chain.events:
             print("No events recorded.")
             return
-        
+
         for ev in self.chain.events:
             verb = ev.get("verb", "?")
             who = ev.get("who", "?")
             when = ev.get("when", "?")
             what = str(ev.get("what", "?"))[:40]
             print(f"[{verb}] {who} @ {when} | what={what}...")
-    
+
     def export(self) -> list:
         return self.chain.export() if self.chain else []
-    
+
     def save(self, path: Optional[str] = None):
         if self.chain:
             self.chain.save(path)
@@ -52,7 +61,7 @@ def record(
     auto_verify: bool = True,
 ):
     chain = AuditChain(issuer=issuer, private_key=private_key)
-    
+
     def decorator(f: Callable) -> Callable:
         @functools.wraps(f)
         def wrapper(*args, **kwargs) -> Any:
@@ -63,7 +72,7 @@ def record(
             }
             j_event = judge(who=issuer, content=content)
             chain.append(j_event)
-            
+
             try:
                 result = f(*args, **kwargs)
                 status = "success"
@@ -78,14 +87,16 @@ def record(
                     v_event = verify(who=issuer, content=result_content)
                     chain.append(v_event)
                 else:
-                    t_event = terminate(who=issuer, content=result_content)
+                    t_event = terminate(
+                        who=issuer, content=result_content
+                    )
                     chain.append(t_event)
-            
+
             return result
-        
+
         wrapper._jep_chain = chain
         return wrapper
-    
+
     if func is not None:
         return decorator(func)
     return decorator
