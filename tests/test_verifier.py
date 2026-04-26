@@ -1,6 +1,7 @@
-import pytest
-from jep.core.verifier import JEPVerifier
+"""Test JEP verification pipeline."""
+
 from jep.core.event import build_event
+from jep.core.verifier import JEPVerifier
 
 
 def test_valid_event():
