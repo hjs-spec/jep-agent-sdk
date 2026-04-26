@@ -8,19 +8,19 @@ version = "1.0.0"
 description = "JEP-Agent SDK 1.0 — Production-grade reference implementation of JEP-04 and JAC-01"
 readme = "README.md"
 license = "BSD-3-Clause"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Yuqiang Wang", email = "signal@humanjudgment.org" }
 ]
-keywords = ["jep", "jac", "agent", "accountability", "audit", "ai-governance", "mcp", "langchain"]
+keywords = ["jep", "jac", "agent", "accountability", "audit", "ai-governance", "langchain"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security :: Cryptography",
 ]
@@ -35,10 +35,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
+langchain = ["langchain>=0.3.0", "langchain-core>=0.3.0"]
 openai = ["openai>=1.0.0"]
-mcp = ["mcp>=1.0.0"]
-dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "httpx>=0.24.0", "black>=23.0.0", "ruff>=0.1.0"]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0", "httpx>=0.24.0", "black>=24.0.0", "ruff>=0.3.0"]
 
 [project.scripts]
 jep = "jep.cli.main:cli"
@@ -58,7 +57,7 @@ python_files = "test_*.py"
 
 [tool.black]
 line-length = 100
-target-version = ['py39']
+target-version = ['py310']
 
 [tool.ruff]
 line-length = 100
