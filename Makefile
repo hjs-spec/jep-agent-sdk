@@ -1,7 +1,7 @@
 .PHONY: install test lint format clean build publish web docker compose
 
 install:
-	pip install -e ".[dev,langchain,openai,mcp]"
+	pip install -e ".[dev,langchain,openai]"
 
 test:
 	pytest tests/ -v --tb=short
