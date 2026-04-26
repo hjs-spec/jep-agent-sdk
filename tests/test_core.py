@@ -1,5 +1,7 @@
 """Test core event construction and hashing."""
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from jep.core.chain import AuditChain
 from jep.core.event import build_event, canonicalize, event_hash
 
@@ -22,9 +24,7 @@ def test_canonicalize_excludes_sig():
 
 
 def test_event_hash_consistency():
-    ev = build_event(
-        "J", "agent", what="sha256:test", nonce="fixed-nonce", when=1000
-    )
+    ev = build_event("J", "agent", what="sha256:test", nonce="fixed-nonce", when=1000)
     h1 = event_hash(ev)
     h2 = event_hash(ev)
     assert h1 == h2
@@ -32,7 +32,8 @@ def test_event_hash_consistency():
 
 
 def test_chain_linkage():
-    chain = AuditChain(issuer="agent")
+    key = Ed25519PrivateKey.generate()
+    chain = AuditChain(issuer="agent", private_key=key)
     chain.append(build_event("J", "agent"))
     e2 = chain.append(build_event("V", "agent"))
     assert e2["ref"] is not None

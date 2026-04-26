@@ -13,9 +13,7 @@ app = FastAPI(title="JEP Web Viewer")
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    static_path = os.path.join(
-        os.path.dirname(__file__), "static", "index.html"
-    )
+    static_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
     if os.path.exists(static_path):
         with open(static_path, "r") as f:
             return f.read()
