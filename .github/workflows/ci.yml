@@ -16,26 +16,26 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-cov pytest-asyncio
         pip install -e ".[langchain,openai]"
-    
+
     - name: Lint
       run: |
         ruff check jep/ tests/
         black --check jep/ tests/
-    
+
     - name: Test
       run: pytest tests/ -v --cov=jep --cov-report=xml
-    
+
     - name: Upload coverage
       uses: codecov/codecov-action@v4
       with:
@@ -43,4 +43,4 @@ jobs:
         fail_ci_if_error: false
 EOF
 
-git add .github/workflows/ci.yml && git commit -m "ci: fix yaml syntax and pytest-cov install" && git push
+git add .github/workflows/ci.yml && git commit -m "ci: fix yaml syntax" && git push
