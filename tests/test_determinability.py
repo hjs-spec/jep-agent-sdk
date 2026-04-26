@@ -32,17 +32,17 @@ def test_not_determinable():
 
 def test_guard_blocks():
     guard = DeterminabilityGuard(
-        evidence_fn=lambda ctx: len(ctx.get("tools", [])),
+        evidence_fn=lambda ctx: len(ctx.get("tools_used", [])),
         target_fn=lambda ctx: ctx.get("ok"),
         knowledge_base=[
-            {"tools": ["a", "b"], "ok": 1},
-            {"tools": ["a"], "ok": 0},
+            {"tools_used": ["a", "b"], "ok": 1},
+            {"tools_used": ["a"], "ok": 0},
         ],
         on_insufficient="raise",
     )
 
     @guard.require_determinable
-    def good(tools):
+    def good(tools_used):
         return "ok"
 
     with pytest.raises(RuntimeError):
