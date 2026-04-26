@@ -38,6 +38,7 @@ class JEPMCPServer:
             tool_func,
             issuer=self.chain.issuer,
             private_key=self.chain.private_key,
+            chain=self.chain,
             auto_verify=True,
         )
         return wrapped
