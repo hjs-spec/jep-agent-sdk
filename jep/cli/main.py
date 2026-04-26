@@ -39,8 +39,9 @@ def web(port, host, reload):
 @click.option("--aud", help="Expected audience")
 def verify(file, public_key, aud):
     """Verify JEP events (signature, chain, replay)."""
-    from jep.core.verifier import JEPVerifier
     from cryptography.hazmat.primitives import serialization
+
+    from jep.core.verifier import JEPVerifier
 
     verifier = JEPVerifier()
     pk = None
