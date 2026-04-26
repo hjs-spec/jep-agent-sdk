@@ -86,9 +86,7 @@ def record(
                 raise
             finally:
                 if auto_verify and status == "success":
-                    v_event = verify(
-                        who=issuer, content=result_content
-                    )
+                    v_event = verify(who=issuer, content=result_content)
                     chain.append(v_event)
                 else:
                     t_event = terminate(who=issuer, content=result_content)

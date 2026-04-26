@@ -1,5 +1,7 @@
 """Test JEP verification pipeline."""
 
+import time
+
 from jep.core.verifier import JEPVerifier
 
 
@@ -9,7 +11,7 @@ def test_valid_event():
         "jep": "1",
         "verb": "J",
         "who": "agent",
-        "when": 1000,
+        "when": int(time.time()),
         "what": "sha256:test",
         "nonce": "test-nonce-1",
         "sig": "",
@@ -23,7 +25,7 @@ def test_replay_detection():
         "jep": "1",
         "verb": "J",
         "who": "agent",
-        "when": 1000,
+        "when": int(time.time()),
         "what": "sha256:test",
         "nonce": "test-nonce-2",
         "sig": "",
@@ -38,7 +40,7 @@ def test_bad_verb():
         "jep": "1",
         "verb": "X",
         "who": "agent",
-        "when": 1000,
+        "when": int(time.time()),
         "what": "sha256:test",
         "nonce": "test-nonce-3",
         "sig": "",
