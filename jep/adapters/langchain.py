@@ -20,9 +20,7 @@ class _JEPCallbackHandler:
         private_key=None,
         storage_path: Optional[str] = None,
     ):
-        self.chain = AuditChain(
-            issuer=issuer, private_key=private_key, storage_path=storage_path
-        )
+        self.chain = AuditChain(issuer=issuer, private_key=private_key, storage_path=storage_path)
         self._run_stack: List[str] = []
 
     def on_chain_start(
@@ -36,9 +34,7 @@ class _JEPCallbackHandler:
         self.chain.append(ev)
         self._run_stack.append(ev["event_id"])
 
-    def on_chain_end(
-        self, outputs: Optional[Dict[str, Any]] = None, **kwargs: Any
-    ) -> Any:
+    def on_chain_end(self, outputs: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
         content = {"type": "chain_end", "outputs": outputs or {}}
         ev = verify(who=self.chain.issuer, content=content)
         self.chain.append(ev)
@@ -139,9 +135,7 @@ def enable_tracing(
     storage_path: Optional[str] = None,
 ):
     """Explicit tracing with callback instance (for manual injection)."""
-    return _JEPCallbackHandler(
-        issuer=issuer, private_key=private_key, storage_path=storage_path
-    )
+    return _JEPCallbackHandler(issuer=issuer, private_key=private_key, storage_path=storage_path)
 
 
 class _AutoPatchModule:

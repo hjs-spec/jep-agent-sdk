@@ -81,10 +81,14 @@ class DeterminabilityGuard:
     def require_determinable(self, func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            tools_used = []
+            if args and isinstance(args[0], list):
+                tools_used = args[0]
+
             context = {
                 "args": args,
                 "kwargs": kwargs,
-                "tools_used": [],
+                "tools_used": tools_used,
             }
 
             result = self.check(context)
@@ -101,10 +105,7 @@ class DeterminabilityGuard:
                     raise RuntimeError(msg)
                 elif self.on_insufficient == "warn":
                     print(f"[JEP WARNING] {msg}")
-                elif (
-                    self.on_insufficient == "fallback"
-                    and self.fallback
-                ):
+                elif self.on_insufficient == "fallback" and self.fallback:
                     return self.fallback(*args, **kwargs)
 
             return func(*args, **kwargs)

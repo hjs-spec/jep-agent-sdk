@@ -24,9 +24,7 @@ def test_canonicalize_excludes_sig():
 
 
 def test_event_hash_consistency():
-    ev = build_event(
-        "J", "agent", what="sha256:test", nonce="fixed-nonce", when=1000
-    )
+    ev = build_event("J", "agent", what="sha256:test", nonce="fixed-nonce", when=1000)
     h1 = event_hash(ev)
     h2 = event_hash(ev)
     assert h1 == h2

@@ -25,17 +25,13 @@ def web(port, host, reload):
     """Launch the causal web viewer."""
     from jep.web.server import start_server
 
-    console.print(
-        f"[bold green]JEP Causal Viewer[/bold green] http://{host}:{port}"
-    )
+    console.print(f"[bold green]JEP Causal Viewer[/bold green] http://{host}:{port}")
     start_server(host=host, port=port, reload=reload)
 
 
 @cli.command()
 @click.argument("file", type=click.Path(exists=True))
-@click.option(
-    "--public-key", type=click.Path(exists=True), help="Ed25519 public key PEM"
-)
+@click.option("--public-key", type=click.Path(exists=True), help="Ed25519 public key PEM")
 @click.option("--aud", help="Expected audience")
 def verify(file, public_key, aud):
     """Verify JEP events (signature, chain, replay)."""
@@ -62,11 +58,7 @@ def verify(file, public_key, aud):
     invalid = 0
     for ev in events:
         result = verifier.verify(ev, public_key=pk, expected_aud=aud)
-        color = (
-            "green"
-            if result == "VALID"
-            else "yellow" if "FAULT" in result else "red"
-        )
+        color = "green" if result == "VALID" else "yellow" if "FAULT" in result else "red"
         table.add_row(
             ev.get("verb", "?"),
             ev["nonce"][:8],
@@ -96,9 +88,7 @@ def export(file, output, title):
     html = _generate_full_report(events, title)
     with open(output, "w", encoding="utf-8") as f:
         f.write(html)
-    console.print(
-        f"[green]Report exported: {output} ({len(events)} events)[/green]"
-    )
+    console.print(f"[green]Report exported: {output} ({len(events)} events)[/green]")
 
 
 def _generate_full_report(events, title):
@@ -201,9 +191,7 @@ def _generate_full_report(events, title):
         "<h2>Event Log</h2>\n"
         "<table>\n"
         "<tr><th>Verb</th><th>Who</th><th>When</th>"
-        "<th>What</th><th>Ref</th><th>Signed</th></tr>\n"
-        + "".join(rows)
-        + "</table>\n"
+        "<th>What</th><th>Ref</th><th>Signed</th></tr>\n" + "".join(rows) + "</table>\n"
         "</div>\n"
         "<script>\n"
         f"const nodes = {json.dumps(nodes_data)};\n"

@@ -33,3 +33,4 @@ mcp_jep_chain.jsonl
 .pytest_cache/
 .coverage
 htmlcov/
+poetry.lock

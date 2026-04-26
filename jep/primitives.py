@@ -14,9 +14,7 @@ def _content_to_what(content: Any) -> Optional[str]:
     if isinstance(content, str):
         data = content.encode("utf-8")
     else:
-        data = json.dumps(
-            content, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
+        data = json.dumps(content, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return _compute_what(data, "sha256")
 
 

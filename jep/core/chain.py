@@ -27,9 +27,7 @@ class AuditChain:
 
         if self.events:
             prev = self.events[-1]
-            prev_hash = (
-                "sha256:" + hashlib.sha256(canonicalize(prev)).hexdigest()
-            )
+            prev_hash = "sha256:" + hashlib.sha256(canonicalize(prev)).hexdigest()
             if event.get("ref") is None:
                 event["ref"] = prev_hash
 
@@ -48,9 +46,7 @@ class AuditChain:
             prev = self.events[i - 1]
             curr = self.events[i]
 
-            expected_ref = (
-                "sha256:" + hashlib.sha256(canonicalize(prev)).hexdigest()
-            )
+            expected_ref = "sha256:" + hashlib.sha256(canonicalize(prev)).hexdigest()
             if curr.get("ref") != expected_ref:
                 return False
 
@@ -73,9 +69,7 @@ class AuditChain:
         target = path or self.storage_path
         if target and os.path.exists(target):
             with open(target, "r", encoding="utf-8") as f:
-                self.events = [
-                    json.loads(line) for line in f if line.strip()
-                ]
+                self.events = [json.loads(line) for line in f if line.strip()]
 
     def _flush(self):
         self.save()

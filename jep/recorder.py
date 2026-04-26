@@ -91,9 +91,7 @@ def record(
                     )
                     chain.append(v_event)
                 else:
-                    t_event = terminate(
-                        who=issuer, content=result_content
-                    )
+                    t_event = terminate(who=issuer, content=result_content)
                     chain.append(t_event)
 
             return result

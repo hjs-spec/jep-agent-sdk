@@ -35,14 +35,10 @@ class _OpenAIJEPTracer:
                 raise
             finally:
                 if status == "success":
-                    v_ev = verify(
-                        who=self.chain.issuer, content=result_content
-                    )
+                    v_ev = verify(who=self.chain.issuer, content=result_content)
                     self.chain.append(v_ev)
                 else:
-                    t_ev = terminate(
-                        who=self.chain.issuer, content=result_content
-                    )
+                    t_ev = terminate(who=self.chain.issuer, content=result_content)
                     self.chain.append(t_ev)
 
             return result
@@ -82,14 +78,10 @@ def auto_patch():
                 raise
             finally:
                 if status == "success":
-                    v_ev = verify(
-                        who=tracer.chain.issuer, content=result_content
-                    )
+                    v_ev = verify(who=tracer.chain.issuer, content=result_content)
                     tracer.chain.append(v_ev)
                 else:
-                    t_ev = terminate(
-                        who=tracer.chain.issuer, content=result_content
-                    )
+                    t_ev = terminate(who=tracer.chain.issuer, content=result_content)
                     tracer.chain.append(t_ev)
 
             return result
@@ -100,9 +92,7 @@ def auto_patch():
 def wrap_agent(agent_instance, issuer: str = "openai:agent", private_key=None):
     """Wrap a specific agent instance."""
     tracer = _OpenAIJEPTracer(issuer=issuer, private_key=private_key)
-    original = getattr(agent_instance, "run", None) or getattr(
-        agent_instance, "invoke", None
-    )
+    original = getattr(agent_instance, "run", None) or getattr(agent_instance, "invoke", None)
     if not original:
         raise ValueError("Agent must have run() or invoke()")
     wrapped = tracer.trace_run(original)

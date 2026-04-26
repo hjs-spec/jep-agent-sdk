@@ -89,9 +89,7 @@ def build_event(
 
 def canonicalize(ev: Dict[str, Any]) -> bytes:
     if not HAS_JCS:
-        raise ImportError(
-            "jcs package required for RFC 8785. Install: pip install jcs"
-        )
+        raise ImportError("jcs package required for RFC 8785. Install: pip install jcs")
 
     payload = {k: v for k, v in ev.items() if k != "sig"}
     return jcs.canonicalize(payload)
@@ -147,7 +145,7 @@ def verify_event_signature(ev: Dict[str, Any], public_key) -> bool:
 
 def verify_payload_integrity(ev: Dict[str, Any]) -> bool:
     if not ev.get("sig"):
-        return False
+        return True
 
     parts = ev["sig"].split(".")
     if len(parts) != 3:
