@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEP Causal Audit Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f19; color: #e2e8f0; min-height: 100vh; overflow: hidden; }
+        .header { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 100; }
+        .header h1 { font-size: 16px; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 10px; }
+        .header .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        .stats { display: flex; gap: 16px; }
+        .stat { text-align: right; }
+        .stat .num { font-size: 18px; font-weight: 700; color: #f8fafc; }
+        .stat .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .main { position: fixed; top: 56px; left: 0; right: 360px; bottom: 0; }
+        .sidebar { position: fixed; top: 56px; right: 0; width: 360px; bottom: 0; background: #0f172a; border-left: 1px solid #1e293b; padding: 20px; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease; }
+        .sidebar.open { transform: translateX(0); }
+        .sidebar h3 { font-size: 13px; color: #94a3b8; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .field { margin-bottom: 12px; }
+        .field .k { font-size: 11px; color: #64748b; margin-bottom: 3px; }
+        .field .v { font-size: 13px; color: #f8fafc; font-family: 'SF Mono', monospace; word-break: break-all; background: #1e293b; padding: 8px; border-radius: 6px; border: 1px solid #334155; }
+        .upload-overlay { position: fixed; inset: 0; background: rgba(11, 15, 25, 0.95); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+        .upload-overlay.hidden { opacity: 0; pointer-events: none; }
+        .upload-zone { width: 480px; height: 240px; border: 2px dashed #334155; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; cursor: pointer; transition: all 0.2s; }
+        .upload-zone:hover { border-color: #60a5fa; background: rgba(96, 165, 250, 0.05); }
+        .upload-zone h2 { font-size: 20px; color: #f8fafc; }
+        .upload-zone p { font-size: 14px; color: #64748b; }
+        .upload-zone input { display: none; }
+        #graph { width: 100%; height: 100%; }
+        .controls { position: fixed; bottom: 24px; left: 24px; display: flex; gap: 8px; z-index: 50; }
+        .btn { padding: 8px 14px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+        .btn:hover { background: #334155; }
+        .legend { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; background: rgba(15, 23, 42, 0.9); padding: 8px 16px; border-radius: 8px; border: 1px solid #1e293b; z-index: 50; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>JEP Causal Audit Viewer <span class="badge">v1.0</span></h1>
+        <div class="stats">
+            <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Events</div></div>
+            <div class="stat"><div class="num" id="statChains">0</div><div class="label">Chains</div></div>
+            <div class="stat"><div class="num" id="statValid">0</div><div class="label">Valid</div></div>
+        </div>
+    </div>
+    
+    <div class="upload-overlay" id="uploadOverlay">
+        <div class="upload-zone" id="dropZone">
+            <h2>Drop events.jsonl</h2>
+            <p>or click to browse</p>
+            <input type="file" id="fileInput" accept=".jsonl,.json">
+        </div>
+    </div>
+    
+    <div class="main">
+        <svg id="graph"></svg>
+    </div>
+    
+    <div class="sidebar" id="sidebar">
+        <h3>Event Details</h3>
+        <div id="detailContent"></div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="resetZoom()">Reset View</button>
+        <button class="btn" onclick="toggleUpload()">Load New</button>
+        <button class="btn" onclick="exportReport()">Export HTML</button>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item"><div class="dot" style="background:#60a5fa"></div>Judge (J)</div>
+        <div class="legend-item"><div class="dot" style="background:#fbbf24"></div>Delegate (D)</div>
+        <div class="legend-item"><div class="dot" style="background:#f87171"></div>Terminate (T)</div>
+        <div class="legend-item"><div class="dot" style="background:#34d399"></div>Verify (V)</div>
+        <div class="legend-item"><div class="dot" style="background:#a78bfa"></div>Cross-Agent</div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadOverlay = document.getElementById('uploadOverlay');
+        const sidebar = document.getElementById('sidebar');
+        let events = [], nodes = [], links = [], simulation = null;
+        let currentTransform = { x: 0, y: 0, k: 1 };
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#60a5fa'; });
+        dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#334155'; });
+        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = '#334155'; if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+        
+        function loadFile(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const lines = e.target.result.split('\n').filter(l => l.trim());
+                events = lines.map(l => JSON.parse(l));
+                uploadOverlay.classList.add('hidden');
+                renderGraph();
+                updateStats();
+            };
+            reader.readAsText(file);
+        }
+        
+        function updateStats() {
+            document.getElementById('statTotal').textContent = events.length;
+            const chains = new Set();
+            events.forEach(e => { if(e.ref) chains.add(e.ref); if(e.task_based_on) chains.add(e.task_based_on); });
+            document.getElementById('statChains').textContent = chains.size;
+            document.getElementById('statValid').textContent = events.filter(e => e.sig && e.sig !== '').length;
+        }
+        
+        function renderGraph() {
+            const svg = document.getElementById('graph');
+            svg.innerHTML = '';
+            const width = svg.clientWidth || 800;
+            const height = svg.clientHeight || 600;
+            
+            nodes = events.map((e, i) => ({
+                id: e.event_id || i,
+                index: i,
+                data: e,
+                x: width/2 + (Math.random()-0.5)*200,
+                y: height/2 + (Math.random()-0.5)*200,
+                vx: 0, vy: 0
+            }));
+            
+            links = [];
+            const nodeMap = new Map(nodes.map(n => [n.id, n]));
+            
+            events.forEach((e, i) => {
+                if (e.ref) {
+                    const target = nodeMap.get(e.ref);
+                    if (target) links.push({ source: nodes[i], target: target, type: 'ref' });
+                }
+                if (e.task_based_on) {
+                    const target = nodeMap.get(e.task_based_on);
+                    if (target) links.push({ source: nodes[i], target: target, type: 'task' });
+                }
+            });
+            
+            for (let iter = 0; iter < 300; iter++) {
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i+1; j < nodes.length; j++) {
+                        const dx = nodes[j].x - nodes[i].x;
+                        const dy = nodes[j].y - nodes[i].y;
+                        let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                        const force = 2000 / (dist * dist);
+                        const fx = (dx/dist) * force;
+                        const fy = (dy/dist) * force;
+                        nodes[i].vx -= fx; nodes[i].vy -= fy;
+                        nodes[j].vx += fx; nodes[j].vy += fy;
+                    }
+                }
+                links.forEach(l => {
+                    const dx = l.target.x - l.source.x;
+                    const dy = l.target.y - l.source.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                    const force = (dist - 120) * 0.05;
+                    const fx = (dx/dist) * force;
+                    const fy = (dy/dist) * force;
+                    l.source.vx += fx; l.source.vy += fy;
+                    l.target.vx -= fx; l.target.vy -= fy;
+                });
+                nodes.forEach(n => {
+                    n.vx += (width/2 - n.x) * 0.005;
+                    n.vy += (height/2 - n.y) * 0.005;
+                    n.x += n.vx; n.y += n.vy;
+                    n.vx *= 0.5; n.vy *= 0.5;
+                });
+            }
+            
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            svg.appendChild(g);
+            
+            links.forEach(l => {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', l.source.x); line.setAttribute('y1', l.source.y);
+                line.setAttribute('x2', l.target.x); line.setAttribute('y2', l.target.y);
+                line.setAttribute('stroke', l.type === 'task' ? '#a78bfa' : '#475569');
+                line.setAttribute('stroke-width', l.type === 'task' ? 2 : 1);
+                line.setAttribute('stroke-dasharray', l.type === 'task' ? '5,5' : 'none');
+                g.appendChild(line);
+            });
+            
+            const colors = { J: '#60a5fa', D: '#fbbf24', T: '#f87171', V: '#34d399' };
+            nodes.forEach(n => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+                circle.setAttribute('r', n.data.task_based_on ? 14 : 10);
+                circle.setAttribute('fill', colors[n.data.verb] || '#94a3b8');
+                circle.setAttribute('stroke', n.data.task_based_on ? '#a78bfa' : '#0f172a');
+                circle.setAttribute('stroke-width', n.data.task_based_on ? 3 : 2);
+                circle.style.cursor = 'pointer';
+                circle.addEventListener('click', () => showDetails(n.data));
+                g.appendChild(circle);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', n.x); text.setAttribute('y', n.y + 28);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#94a3b8');
+                text.setAttribute('font-size', '10');
+                text.textContent = n.data.verb;
+                g.appendChild(text);
+            });
+            
+            let isDragging = false, startX, startY;
+            svg.addEventListener('mousedown', e => { isDragging = true; startX = e.clientX - currentTransform.x; startY = e.clientY - currentTransform.y; });
+            window.addEventListener('mousemove', e => { if(!isDragging) return; currentTransform.x = e.clientX - startX; currentTransform.y = e.clientY - startY; g.setAttribute('transform', `translate(${currentTransform.x},${currentTransform.y}) scale(${currentTransform.k})`); });
+            window.addEventListener('mouseup', () => isDragging = false);
+            svg.addEventListener('wheel', e => {
+                e.preventDefault();
+                const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                currentTransform.k *= scaleFactor;
+                g.setAttribute('transform', `translate(${currentTransform.x},${currentTransform.y}) scale(${currentTransform.k})`);
+            });
+        }
+        
+        function showDetails(ev) {
+            const c = document.getElementById('detailContent');
+            const fields = ['verb','who','when','what','nonce','ref','task_based_on','aud','sig'];
+            let html = '';
+            fields.forEach(f => {
+                const val = ev[f];
+                if (val !== undefined && val !== null) {
+                    const display = typeof val === 'string' && val.length > 60 ? val.substring(0,60)+'...' : JSON.stringify(val);
+                    html += `<div class="field"><div class="k">${f}</div><div class="v">${display}</div></div>`;
+                }
+            });
+            if (ev.extensions) {
+                html += `<div class="field"><div class="k">extensions</div><div class="v">${JSON.stringify(ev.extensions, null, 2)}</div></div>`;
+            }
+            c.innerHTML = html;
+            sidebar.classList.add('open');
+        }
+        
+        function resetZoom() { currentTransform = {x:0,y:0,k:1}; renderGraph(); }
+        function toggleUpload() { uploadOverlay.classList.remove('hidden'); }
+        function exportReport() {
+            const html = document.documentElement.outerHTML;
+            const blob = new Blob([html], {type:'text/html'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'jep_audit_report.html';
+            a.click();
+        }
+        
+        document.addEventListener('click', e => {
+            if (!sidebar.contains(e.target) && !e.target.closest('circle')) sidebar.classList.remove('open');
+        });
+    </script>
+</body>
+</html>
