@@ -19,5 +19,13 @@ def test_replay_detection():
 
 def test_bad_verb():
     v = JEPVerifier()
-    ev = build_event("X", "agent")
+    ev = {
+        "jep": "1",
+        "verb": "X",
+        "who": "agent",
+        "when": 1000,
+        "what": "sha256:test",
+        "nonce": "test-nonce",
+        "sig": "",
+    }
     assert "bad verb" in v.verify(ev).lower()
