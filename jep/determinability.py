@@ -3,16 +3,16 @@ CheckDeterminability + DeterminabilityGuard (runtime gate).
 Extension module, not part of JEP-04/JAC-01 core protocol.
 """
 
-from typing import List, Callable, Dict, Any, Tuple, Optional
-from collections import defaultdict
 import functools
+from collections import defaultdict
+from typing import Any, Callable, List, Optional, Tuple
 
 
 def check_determinability(configs, omega, target):
     groups = defaultdict(list)
     for C in configs:
         groups[omega(C)].append(C)
-    
+
     delta = {}
     for w, group in groups.items():
         values = {target(C) for C in group}
@@ -22,7 +22,7 @@ def check_determinability(configs, omega, target):
             C2 = next(C for C in group if target(C) == vals[1])
             return ("NotDetermined", C1, C2, w)
         delta[w] = target(group[0])
-    
+
     return ("Determined", delta)
 
 
@@ -50,7 +50,7 @@ class DeterminabilityGuard:
     """
     Runtime gate: intercept agent execution if evidence is insufficient.
     """
-    
+
     def __init__(
         self,
         evidence_fn: Callable[[Any], Any],
@@ -64,20 +64,20 @@ class DeterminabilityGuard:
         self.knowledge_base = knowledge_base or []
         self.on_insufficient = on_insufficient
         self.fallback = fallback
-    
+
     def check(self, context: Any) -> Tuple[str, Any]:
         if not self.knowledge_base:
             return ("Determined", {})
-        
+
         def omega(c):
             return self.evidence_fn(c)
-        
+
         def target(c):
             return self.target_fn(c)
-        
+
         test_set = self.knowledge_base + [context]
         return check_determinability(test_set, omega, target)
-    
+
     def require_determinable(self, func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -86,23 +86,27 @@ class DeterminabilityGuard:
                 "kwargs": kwargs,
                 "tools_used": [],
             }
-            
+
             result = self.check(context)
-            
+
             if result[0] == "NotDetermined":
                 msg = (
                     f"DeterminabilityGuard blocked {func.__name__}: "
-                    f"evidence insufficient. Counterexample: {result[1]} vs {result[2]} "
-                    f"share observation {result[3]} but have different outcomes. "
-                    f"Add more evidence (tools/verification) before proceeding."
+                    f"evidence insufficient. "
+                    f"Counterexample: {result[1]} vs {result[2]} "
+                    f"share observation {result[3]} but have different "
+                    f"outcomes. Add more evidence before proceeding."
                 )
                 if self.on_insufficient == "raise":
                     raise RuntimeError(msg)
                 elif self.on_insufficient == "warn":
                     print(f"[JEP WARNING] {msg}")
-                elif self.on_insufficient == "fallback" and self.fallback:
+                elif (
+                    self.on_insufficient == "fallback"
+                    and self.fallback
+                ):
                     return self.fallback(*args, **kwargs)
-            
+
             return func(*args, **kwargs)
-        
+
         return wrapper
