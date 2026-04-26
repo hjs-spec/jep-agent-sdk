@@ -4,7 +4,7 @@
 [![IETF Draft](https://img.shields.io/badge/IETF-JAC--01-purple)](https://datatracker.ietf.org/doc/draft-wang-jac-01/)
 [![PyPI](https://img.shields.io/badge/pip-jep--agent--sdk-blue)](https://pypi.org/project/jep-agent-sdk/)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
 **One line to install. One line to integrate. Full causal auditability.**
 
@@ -20,8 +20,10 @@ pip install jep-agent-sdk
 
 With framework adapters:
 ```bash
-pip install jep-agent-sdk[langchain,openai,mcp]
+pip install jep-agent-sdk[langchain,openai]
 ```
+
+> **MCP users**: The MCP SDK is not yet available on PyPI. Install manually from [github.com/modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) before using `jep.adapters.mcp`.
 
 ---
 
@@ -58,8 +60,6 @@ jep web --port 8080
 ```
 
 Drag-and-drop your `events.jsonl`. Get an interactive force-directed causal graph. Click any node to inspect the full JEP event. Pan, zoom, export.
-
-![viewer](https://via.placeholder.com/800x400/0b0f19/e2e8f0?text=Interactive+Causal+Topology+Viewer)
 
 ---
 
