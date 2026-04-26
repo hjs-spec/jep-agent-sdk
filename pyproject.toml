@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jep-agent-sdk"
+version = "1.0.0"
+description = "JEP-Agent SDK 1.0 — Production-grade reference implementation of JEP-04 and JAC-01"
+readme = "README.md"
+license = "BSD-3-Clause"
+requires-python = ">=3.9"
+authors = [
+    { name = "Yuqiang Wang", email = "signal@humanjudgment.org" }
+]
+keywords = ["jep", "jac", "agent", "accountability", "audit", "ai-governance", "mcp", "langchain"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security :: Cryptography",
+]
+
+dependencies = [
+    "cryptography>=41.0.0",
+    "jcs>=0.2.0",
+    "click>=8.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
+openai = ["openai>=1.0.0"]
+mcp = ["mcp>=1.0.0"]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "httpx>=0.24.0", "black>=23.0.0", "ruff>=0.1.0"]
+
+[project.scripts]
+jep = "jep.cli.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/hjs-spec/jep-agent-sdk"
+Documentation = "https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/"
+Repository = "https://github.com/hjs-spec/jep-agent-sdk"
+Issues = "https://github.com/hjs-spec/jep-agent-sdk/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["jep"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I"]
