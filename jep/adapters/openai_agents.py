@@ -4,21 +4,26 @@ Usage:
     import jep.adapters.openai_agents.auto   # <-- All agent runs recorded automatically.
 """
 
-from typing import Any, Optional
+import sys
+
 from jep.core.chain import AuditChain
-from jep.primitives import judge, verify, terminate
+from jep.primitives import judge, terminate, verify
 
 
 class _OpenAIJEPTracer:
     def __init__(self, issuer: str = "openai:agent", private_key=None):
         self.chain = AuditChain(issuer=issuer, private_key=private_key)
-    
+
     def trace_run(self, original_run):
         def wrapper(*args, **kwargs):
-            content = {"type": "agent_run", "args": repr(args), "kwargs": repr(kwargs)}
+            content = {
+                "type": "agent_run",
+                "args": repr(args),
+                "kwargs": repr(kwargs),
+            }
             j_ev = judge(who=self.chain.issuer, content=content)
             self.chain.append(j_ev)
-            
+
             try:
                 result = original_run(*args, **kwargs)
                 status = "success"
@@ -30,14 +35,18 @@ class _OpenAIJEPTracer:
                 raise
             finally:
                 if status == "success":
-                    v_ev = verify(who=self.chain.issuer, content=result_content)
+                    v_ev = verify(
+                        who=self.chain.issuer, content=result_content
+                    )
                     self.chain.append(v_ev)
                 else:
-                    t_ev = terminate(who=self.chain.issuer, content=result_content)
+                    t_ev = terminate(
+                        who=self.chain.issuer, content=result_content
+                    )
                     self.chain.append(t_ev)
-            
+
             return result
-        
+
         wrapper._jep_chain = self.chain
         return wrapper
 
@@ -48,16 +57,20 @@ def auto_patch():
         import openai
     except ImportError:
         return
-    
-    if hasattr(openai.resources.chat.completions.Completions, 'create'):
+
+    if hasattr(openai.resources.chat.completions.Completions, "create"):
         _orig = openai.resources.chat.completions.Completions.create
-        
+
         def _traced_create(self, *args, **kwargs):
             tracer = _OpenAIJEPTracer(issuer="openai:chat")
-            content = {"type": "chat_completion", "model": kwargs.get("model"), "messages_count": len(kwargs.get("messages", []))}
+            content = {
+                "type": "chat_completion",
+                "model": kwargs.get("model"),
+                "messages_count": len(kwargs.get("messages", [])),
+            }
             j_ev = judge(who=tracer.chain.issuer, content=content)
             tracer.chain.append(j_ev)
-            
+
             try:
                 result = _orig(self, *args, **kwargs)
                 status = "success"
@@ -69,21 +82,27 @@ def auto_patch():
                 raise
             finally:
                 if status == "success":
-                    v_ev = verify(who=tracer.chain.issuer, content=result_content)
+                    v_ev = verify(
+                        who=tracer.chain.issuer, content=result_content
+                    )
                     tracer.chain.append(v_ev)
                 else:
-                    t_ev = terminate(who=tracer.chain.issuer, content=result_content)
+                    t_ev = terminate(
+                        who=tracer.chain.issuer, content=result_content
+                    )
                     tracer.chain.append(t_ev)
-            
+
             return result
-        
+
         openai.resources.chat.completions.Completions.create = _traced_create
 
 
 def wrap_agent(agent_instance, issuer: str = "openai:agent", private_key=None):
     """Wrap a specific agent instance."""
     tracer = _OpenAIJEPTracer(issuer=issuer, private_key=private_key)
-    original = getattr(agent_instance, 'run', None) or getattr(agent_instance, 'invoke', None)
+    original = getattr(agent_instance, "run", None) or getattr(
+        agent_instance, "invoke", None
+    )
     if not original:
         raise ValueError("Agent must have run() or invoke()")
     wrapped = tracer.trace_run(original)
@@ -93,9 +112,9 @@ def wrap_agent(agent_instance, issuer: str = "openai:agent", private_key=None):
     return agent_instance
 
 
-import sys
 class _AutoPatchModule:
     def __init__(self):
         auto_patch()
 
-sys.modules[__name__ + '.auto'] = _AutoPatchModule()
+
+sys.modules[__name__ + ".auto"] = _AutoPatchModule()
