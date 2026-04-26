@@ -4,20 +4,25 @@ Reference implementation of draft-wang-jep-judgment-event-protocol-04
 with JAC-01 extension support.
 """
 
+from jep.core.chain import AuditChain
 from jep.core.event import (
     build_event,
+    canonicalize,
+    event_hash,
     sign_event,
     verify_event_signature,
     verify_payload_integrity,
-    canonicalize,
-    event_hash,
 )
 from jep.core.verifier import JEPVerifier
-from jep.core.chain import AuditChain
-from jep.primitives import judge, delegate, terminate, verify
-from jep.recorder import record, trace
-from jep.determinability import check_determinability, conflict_edges, evidence_cover, DeterminabilityGuard
+from jep.determinability import (
+    DeterminabilityGuard,
+    check_determinability,
+    conflict_edges,
+    evidence_cover,
+)
 from jep.extensions.jac import build_jac_event, verify_jac_core
+from jep.primitives import delegate, judge, terminate, verify
+from jep.recorder import record, trace
 
 __all__ = [
     "build_event",
