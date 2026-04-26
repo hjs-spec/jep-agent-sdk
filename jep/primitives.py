@@ -55,7 +55,7 @@ def terminate(
 
 def verify(
     who: str,
-    ref: str,
+    ref: Optional[str] = None,
     content: Any = None,
     what: Optional[str] = None,
     **kwargs,
