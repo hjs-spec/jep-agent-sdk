@@ -1,6 +1,7 @@
-import pytest
-from jep.core.event import build_event, canonicalize, event_hash, sign_event, verify_event_signature, verify_payload_integrity
+"""Test core event construction and hashing."""
+
 from jep.core.chain import AuditChain
+from jep.core.event import build_event, canonicalize, event_hash
 
 
 def test_build_event_structure():
@@ -21,7 +22,9 @@ def test_canonicalize_excludes_sig():
 
 
 def test_event_hash_consistency():
-    ev = build_event("J", "agent", what="sha256:test", nonce="fixed-nonce", when=1000)
+    ev = build_event(
+        "J", "agent", what="sha256:test", nonce="fixed-nonce", when=1000
+    )
     h1 = event_hash(ev)
     h2 = event_hash(ev)
     assert h1 == h2
@@ -30,7 +33,7 @@ def test_event_hash_consistency():
 
 def test_chain_linkage():
     chain = AuditChain(issuer="agent")
-    e1 = chain.append(build_event("J", "agent"))
+    chain.append(build_event("J", "agent"))
     e2 = chain.append(build_event("V", "agent"))
     assert e2["ref"] is not None
     assert e2["ref"].startswith("sha256:")
