@@ -167,4 +167,3 @@ GitHub: [@hjs-spec](https://github.com/hjs-spec)
 ---
 
 *JEP-Agent SDK is released under BSD-3-Clause. The protocol draft is an individual IETF Internet-Draft and does not represent IETF endorsement.*
-```
