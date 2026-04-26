@@ -58,9 +58,11 @@ def record(
     *,
     issuer: str = "agent:default",
     private_key=None,
+    chain: Optional[AuditChain] = None,
     auto_verify: bool = True,
 ):
-    chain = AuditChain(issuer=issuer, private_key=private_key)
+    if chain is None:
+        chain = AuditChain(issuer=issuer, private_key=private_key)
 
     def decorator(f: Callable) -> Callable:
         @functools.wraps(f)
@@ -84,7 +86,9 @@ def record(
                 raise
             finally:
                 if auto_verify and status == "success":
-                    v_event = verify(who=issuer, content=result_content)
+                    v_event = verify(
+                        who=issuer, content=result_content
+                    )
                     chain.append(v_event)
                 else:
                     t_event = terminate(
