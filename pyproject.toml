@@ -37,7 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 langchain = ["langchain>=0.3.0", "langchain-core>=0.3.0"]
 openai = ["openai>=1.0.0"]
-dev = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0", "httpx>=0.24.0", "black>=24.0.0", "ruff>=0.3.0"]
+dev = ["pytest>=8.0.0", "pytest-cov>=6.0", "pytest-asyncio>=0.24.0", "httpx>=0.24.0", "black>=24.0.0", "ruff>=0.3.0"]
 
 [project.scripts]
 jep = "jep.cli.main:cli"

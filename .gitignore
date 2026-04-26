@@ -34,3 +34,4 @@ mcp_jep_chain.jsonl
 .coverage
 htmlcov/
 poetry.lock
+coverage.xml
