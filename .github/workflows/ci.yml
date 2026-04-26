@@ -31,6 +31,8 @@ jobs:
         ruff check jep/ tests/
         black --check jep/ tests/
     
+    - name: Ensure pytest-cov
+      run: pip install pytest-cov
     - name: Test
       run: pytest tests/ -v --cov=jep --cov-report=xml
     
