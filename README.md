@@ -1,3 +1,14 @@
+> Historical repository.
+>
+> This repository reflects an earlier design line and is no longer the current implementation track.
+>
+> Current versions:
+>
+> - JEP v0.6: https://github.com/hjs-spec/jep-v06
+> - JEP API v0.6: https://github.com/hjs-spec/jep-api
+> - HJS v0.5: https://github.com/hjs-spec/hjs-05
+> - JAC v0.5: https://github.com/hjs-spec/jac-agent-02
+
 # JEP-Agent SDK 1.0
 
 [![IETF Draft](https://img.shields.io/badge/IETF-JEP--04-blue)](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/)
