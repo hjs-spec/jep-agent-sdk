@@ -17,9 +17,9 @@
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 
-**One line to install. One line to integrate. Full causal auditability.**
+**Historical tracing SDK with explicit instrumentation and local verification.**
 
-JEP-Agent SDK is the production-grade reference implementation of the [Judgment Event Protocol (JEP-04)](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/) and [JAC-01](https://datatracker.ietf.org/doc/draft-wang-jac-01/). It turns any Python agent into a verifiable, tamper-evident, cross-auditable system — without changing your business logic.
+JEP-Agent SDK is an experimental implementation of the [Judgment Event Protocol (JEP-04)](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/) and [JAC-01](https://datatracker.ietf.org/doc/draft-wang-jac-01/). It records instrumented calls using the historical event format. A configured signing key and independently trusted verification key are required for signature assurance.
 
 ---
 
@@ -34,7 +34,7 @@ With framework adapters:
 pip install jep-agent-sdk[langchain,openai]
 ```
 
-> **MCP users**: The MCP SDK is not yet available on PyPI. Install manually from [github.com/modelcontextprotocol/python-sdk](https://github.com/modelcontextprotocol/python-sdk) before using `jep.adapters.mcp`.
+> For current MCP and OpenAI Agents integrations, use `jep-mcp-wrapper` and `jep-openai-agents-middleware`. This repository retains legacy adapters.
 
 ---
 
@@ -42,9 +42,12 @@ pip install jep-agent-sdk[langchain,openai]
 
 ```python
 from jep import trace
+from jep.recorder import record
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-trace.enable(issuer="did:example:agent-001")
+trace.enable(issuer="did:example:agent-001", private_key=Ed25519PrivateKey.generate())
 
+@record(issuer="did:example:agent-001", chain=trace.chain)
 def my_agent(query: str) -> str:
     return f"Result for {query}"
 
@@ -54,12 +57,12 @@ trace.view()   # See the J/D/T/V event chain in your terminal
 
 ---
 
-## TRUE Zero-Code Framework Integration
+## Legacy framework adapters
 
 | Framework | Integration | Your Code Changes |
 |-----------|-------------|-------------------|
-| **LangChain** | `import jep.adapters.langchain.auto` | **Zero** |
-| **OpenAI Agents SDK** | `import jep.adapters.openai_agents.auto` | **Zero** |
+| **LangChain** | `import jep.adapters.langchain.auto` | Experimental patch |
+| **OpenAI Chat Completions (legacy)** | `import jep.adapters.openai_agents.auto` | Experimental patch |
 | **MCP** | `from jep.adapters.mcp import JEPMCPServer` | **One line** |
 
 ---
@@ -92,7 +95,7 @@ def my_agent(query: str, tools_used: list) -> str:
     ...
 ```
 
-**What it does:** If your agent hasn't gathered enough evidence to make a deterministic decision, the guard blocks execution and tells you exactly what's missing. No more hallucinations. No more wasted tokens.
+**What it does:** If your agent hasn't gathered enough evidence to make a deterministic decision, the guard blocks execution and tells you exactly what's missing. This is an application-defined gate; it does not guarantee factual accuracy.
 
 ---
 
@@ -110,7 +113,7 @@ jep export events.jsonl --output report.html
 
 ## What is JEP?
 
-JEP (Judgment Event Protocol) is a minimal, IETF-standardized log format for AI agent decisions. It defines four immutable verbs:
+JEP (Judgment Event Protocol) is a minimal log format proposed in an individual IETF Internet-Draft for AI agent decisions. It defines four immutable verbs:
 
 | Verb | Meaning | RFC 2119 |
 |------|---------|----------|
@@ -119,7 +122,7 @@ JEP (Judgment Event Protocol) is a minimal, IETF-standardized log format for AI 
 | **T** | Terminate — Close lifecycle | MUST |
 | **V** | Verify — Validate an event | MUST |
 
-Every event is signed (Ed25519 JWS), canonicalized (RFC 8785 JCS), hash-linked, and anti-replay protected.
+Signing is optional at recording time. Unsigned events are unverified. This historical format uses its own embedded JWS payload and hash links; use `jep-v06` for the current detached JWS/JCS conformance baseline.
 
 ---
 

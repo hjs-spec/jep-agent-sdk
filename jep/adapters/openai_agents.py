@@ -1,5 +1,5 @@
 """
-OpenAI Agents SDK integration — TRUE zero-code.
+Legacy OpenAI Chat Completions instrumentation; current Agents SDK uses the separate middleware.
 Usage:
     import jep.adapters.openai_agents.auto   # <-- All agent runs recorded automatically.
 """
@@ -21,7 +21,7 @@ class _OpenAIJEPTracer:
 
 
 def auto_patch():
-    """Globally patch OpenAI client to trace all agent completions."""
+    """Patch synchronous Chat Completions; collected events are exposed through trace."""
     try:
         import openai
     except ImportError:
@@ -29,9 +29,16 @@ def auto_patch():
 
     if hasattr(openai.resources.chat.completions.Completions, "create"):
         _orig = openai.resources.chat.completions.Completions.create
+        if getattr(_orig, "_jep_instrumented", False):
+            return
 
         def _traced_create(self, *args, **kwargs):
-            tracer = _OpenAIJEPTracer(issuer="openai:chat")
+            from jep.recorder import trace
+
+            if not trace.enabled or trace.chain is None:
+                trace.enable(issuer="openai:chat")
+            tracer = _OpenAIJEPTracer(issuer=trace.chain.issuer)
+            tracer.chain = trace.chain
             content = {
                 "type": "chat_completion",
                 "model": kwargs.get("model"),
@@ -61,6 +68,7 @@ def auto_patch():
 
             return result
 
+        _traced_create._jep_instrumented = True
         openai.resources.chat.completions.Completions.create = _traced_create
 
 

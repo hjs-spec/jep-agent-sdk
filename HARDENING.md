@@ -18,3 +18,7 @@ black --check jep/ tests/
 ## Compatibility and remaining limits
 
 Legacy-04 embedded EdDSA signatures and legacy unsigned-event link hashes remain unchanged. This SDK is not the v0.6 wire SDK. verify_chain(public_key=...) is required for imported signed archives; unsigned traces remain available for recording. The jep import/console namespace still overlaps other packages; install in a separate environment. OpenAI monkey patching remains a legacy Completions integration; use the dedicated middleware for current Agents SDK integration.
+
+## Follow-up hardening
+
+The legacy synchronous Chat Completions patch is idempotent and retains events in the public trace manager instead of discarding each call chain. Quickstart now uses explicit @record instrumentation and a signing key. Documentation distinguishes this historical adapter from the current Agents SDK middleware and removes unsupported production/standardization claims.
