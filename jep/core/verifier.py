@@ -3,6 +3,7 @@ JEP-04 and JAC-01 verification logic.
 """
 
 import time
+from threading import Lock
 from typing import Any, Callable, Dict, Optional, Set
 
 from jep.core.event import verify_event_signature, verify_payload_integrity
@@ -12,6 +13,7 @@ class JEPVerifier:
     def __init__(self, clock_skew_tolerance: int = 300):
         self.seen_nonces: Set[str] = set()
         self.clock_skew = clock_skew_tolerance
+        self._nonce_lock = Lock()
 
     def verify(
         self,
@@ -38,10 +40,13 @@ class JEPVerifier:
         if ev.get("sig") and not verify_payload_integrity(ev):
             return "INVALID: payload tampered after signing"
 
-        nonce = ev["nonce"]
-        if nonce in self.seen_nonces:
-            return "INVALID: replay detected"
-        self.seen_nonces.add(nonce)
+        if type(ev["when"]) is not int or not isinstance(ev["nonce"], str) or not ev["nonce"]:
+            return "INVALID: timestamp or nonce type"
+        nonce = (ev["who"], ev.get("aud"), ev["nonce"])
+        if not isinstance(ev["who"], str) or (
+            ev.get("aud") is not None and not isinstance(ev["aud"], str)
+        ):
+            return "INVALID: actor or audience type"
 
         now = int(time.time())
         ts = ev["when"]
@@ -56,6 +61,7 @@ class JEPVerifier:
         if ref is not None and not isinstance(ref, str):
             return "INVALID: ref must be string or null"
 
+        status = "VALID"
         task_based_on = ev.get("task_based_on")
         if task_based_on is not None and task_parent_lookup is not None:
             if not task_parent_lookup(task_based_on):
@@ -63,10 +69,18 @@ class JEPVerifier:
                 if "https://jac.org/fault" in extensions:
                     fault = extensions["https://jac.org/fault"]
                     if fault.get("expected_parent") == task_based_on:
-                        return "VALID_WITH_FAULT"
-                return "INVALID: parent task not found"
+                        status = "VALID_WITH_FAULT"
+                if status != "VALID_WITH_FAULT":
+                    return "INVALID: parent task not found"
 
-        return "VALID"
+        if public_key is None:
+            return "UNVERIFIED: trusted public key required"
+        with self._nonce_lock:
+            if nonce in self.seen_nonces:
+                return "INVALID: replay detected"
+            self.seen_nonces.add(nonce)
+        return status
 
     def reset_nonce_cache(self):
-        self.seen_nonces.clear()
+        with self._nonce_lock:
+            self.seen_nonces.clear()

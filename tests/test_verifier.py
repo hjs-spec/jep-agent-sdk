@@ -2,6 +2,9 @@
 
 import time
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from jep.core.event import sign_event
 from jep.core.verifier import JEPVerifier
 
 
@@ -16,7 +19,9 @@ def test_valid_event():
         "nonce": "test-nonce-1",
         "sig": "",
     }
-    assert v.verify(ev) == "VALID"
+    key = Ed25519PrivateKey.generate()
+    sign_event(ev, key)
+    assert v.verify(ev, key.public_key()) == "VALID"
 
 
 def test_replay_detection():
@@ -30,8 +35,10 @@ def test_replay_detection():
         "nonce": "test-nonce-2",
         "sig": "",
     }
-    assert v.verify(ev) == "VALID"
-    assert "replay" in v.verify(ev).lower()
+    key = Ed25519PrivateKey.generate()
+    sign_event(ev, key)
+    assert v.verify(ev, key.public_key()) == "VALID"
+    assert "replay" in v.verify(ev, key.public_key()).lower()
 
 
 def test_bad_verb():

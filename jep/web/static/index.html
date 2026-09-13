@@ -88,7 +88,7 @@
         
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#60a5fa'; });
-        dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#334155'; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#334155'; });
         dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = '#334155'; if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
         fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
         
@@ -221,18 +221,23 @@
         function showDetails(ev) {
             const c = document.getElementById('detailContent');
             const fields = ['verb','who','when','what','nonce','ref','task_based_on','aud','sig'];
-            let html = '';
+            c.replaceChildren();
+            const addField = (name, value) => {
+                const row = document.createElement('div');
+                row.className = 'field';
+                const label = document.createElement('div');
+                label.className = 'k';
+                label.textContent = name;
+                const content = document.createElement('div');
+                content.className = 'v';
+                content.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+                row.append(label, content);
+                c.append(row);
+            };
             fields.forEach(f => {
-                const val = ev[f];
-                if (val !== undefined && val !== null) {
-                    const display = typeof val === 'string' && val.length > 60 ? val.substring(0,60)+'...' : JSON.stringify(val);
-                    html += `<div class="field"><div class="k">${f}</div><div class="v">${display}</div></div>`;
-                }
+                if (ev[f] !== undefined && ev[f] !== null) addField(f, ev[f]);
             });
-            if (ev.extensions) {
-                html += `<div class="field"><div class="k">extensions</div><div class="v">${JSON.stringify(ev.extensions, null, 2)}</div></div>`;
-            }
-            c.innerHTML = html;
+            if (ev.extensions) addField('extensions', ev.extensions);
             sidebar.classList.add('open');
         }
         

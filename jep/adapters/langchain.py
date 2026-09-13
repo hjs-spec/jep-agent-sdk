@@ -32,7 +32,7 @@ class _JEPCallbackHandler:
         content = {"type": "chain_start", "inputs": inputs or {}}
         ev = judge(who=self.chain.issuer, content=content)
         self.chain.append(ev)
-        self._run_stack.append(ev["event_id"])
+        self._run_stack.append(str(kwargs.get("run_id") or ev["nonce"]))
 
     def on_chain_end(self, outputs: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
         content = {"type": "chain_end", "outputs": outputs or {}}
@@ -45,6 +45,9 @@ class _JEPCallbackHandler:
         content = {"type": "chain_error", "error": str(error)}
         ev = terminate(who=self.chain.issuer, content=content)
         self.chain.append(ev)
+
+        if self._run_stack:
+            self._run_stack.pop()
 
     def on_tool_start(
         self,

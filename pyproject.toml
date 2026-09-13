@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "jep-agent-sdk"
 version = "1.0.0"
-description = "JEP-Agent SDK 1.0 — Production-grade reference implementation of JEP-04 and JAC-01"
+description = "JEP-Agent SDK 1.0 — Legacy reference implementation of JEP-04 and JAC-01"
 readme = "README.md"
 license = "BSD-3-Clause"
 requires-python = ">=3.10"
@@ -30,6 +30,7 @@ dependencies = [
     "jcs>=0.2.0",
     "click>=8.0.0",
     "fastapi>=0.100.0",
+    "python-multipart>=0.0.18",
     "uvicorn>=0.23.0",
     "rich>=13.0.0",
 ]

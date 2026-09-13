@@ -1,5 +1,5 @@
 """
-OpenAI Agents SDK integration — TRUE zero-code.
+Legacy OpenAI Chat Completions instrumentation; current Agents SDK uses the separate middleware.
 Usage:
     import jep.adapters.openai_agents.auto   # <-- All agent runs recorded automatically.
 """
@@ -15,40 +15,13 @@ class _OpenAIJEPTracer:
         self.chain = AuditChain(issuer=issuer, private_key=private_key)
 
     def trace_run(self, original_run):
-        def wrapper(*args, **kwargs):
-            content = {
-                "type": "agent_run",
-                "args": repr(args),
-                "kwargs": repr(kwargs),
-            }
-            j_ev = judge(who=self.chain.issuer, content=content)
-            self.chain.append(j_ev)
+        from jep.recorder import record
 
-            try:
-                result = original_run(*args, **kwargs)
-                status = "success"
-                result_content = {"result": repr(result)[:500]}
-            except Exception as e:
-                result = None
-                status = f"error:{type(e).__name__}"
-                result_content = {"error": str(e)[:500]}
-                raise
-            finally:
-                if status == "success":
-                    v_ev = verify(who=self.chain.issuer, content=result_content)
-                    self.chain.append(v_ev)
-                else:
-                    t_ev = terminate(who=self.chain.issuer, content=result_content)
-                    self.chain.append(t_ev)
-
-            return result
-
-        wrapper._jep_chain = self.chain
-        return wrapper
+        return record(original_run, issuer=self.chain.issuer, chain=self.chain)
 
 
 def auto_patch():
-    """Globally patch OpenAI client to trace all agent completions."""
+    """Patch synchronous Chat Completions; collected events are exposed through trace."""
     try:
         import openai
     except ImportError:
@@ -56,9 +29,16 @@ def auto_patch():
 
     if hasattr(openai.resources.chat.completions.Completions, "create"):
         _orig = openai.resources.chat.completions.Completions.create
+        if getattr(_orig, "_jep_instrumented", False):
+            return
 
         def _traced_create(self, *args, **kwargs):
-            tracer = _OpenAIJEPTracer(issuer="openai:chat")
+            from jep.recorder import trace
+
+            if not trace.enabled or trace.chain is None:
+                trace.enable(issuer="openai:chat")
+            tracer = _OpenAIJEPTracer(issuer=trace.chain.issuer)
+            tracer.chain = trace.chain
             content = {
                 "type": "chat_completion",
                 "model": kwargs.get("model"),
@@ -67,11 +47,13 @@ def auto_patch():
             j_ev = judge(who=tracer.chain.issuer, content=content)
             tracer.chain.append(j_ev)
 
+            status = "error:interrupted"
+            result_content = {"error": status}
             try:
                 result = _orig(self, *args, **kwargs)
                 status = "success"
                 result_content = {"completion": str(result)[:300]}
-            except Exception as e:
+            except BaseException as e:
                 result = None
                 status = f"error:{type(e).__name__}"
                 result_content = {"error": str(e)}
@@ -86,6 +68,7 @@ def auto_patch():
 
             return result
 
+        _traced_create._jep_instrumented = True
         openai.resources.chat.completions.Completions.create = _traced_create
 
 
