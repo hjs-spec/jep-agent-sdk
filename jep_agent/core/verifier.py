@@ -6,7 +6,7 @@ import time
 from threading import Lock
 from typing import Any, Callable, Dict, Optional, Set
 
-from jep.core.event import verify_event_signature, verify_payload_integrity
+from jep_agent.core.event import verify_event_signature, verify_payload_integrity
 
 
 class JEPVerifier:

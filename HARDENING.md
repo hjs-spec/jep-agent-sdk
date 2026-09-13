@@ -11,13 +11,13 @@ Signature verification binds the embedded signed payload to the current event. C
 ```sh
 python -m pytest -q
 python validate.py
-ruff check jep/ tests/
-black --check jep/ tests/
+ruff check jep_agent/ tests/
+black --check jep_agent/ tests/
 ```
 
 ## Compatibility and remaining limits
 
-Legacy-04 embedded EdDSA signatures and legacy unsigned-event link hashes remain unchanged. This SDK is not the v0.6 wire SDK. verify_chain(public_key=...) is required for imported signed archives; unsigned traces remain available for recording. The jep import/console namespace still overlaps other packages; install in a separate environment. OpenAI monkey patching remains a legacy Completions integration; use the dedicated middleware for current Agents SDK integration.
+Legacy-04 embedded EdDSA signatures and legacy unsigned-event link hashes remain unchanged. This SDK is not the v0.6 wire SDK. verify_chain(public_key=...) is required for imported signed archives; unsigned traces remain available for recording. Version 2 uses `jep_agent` and `jep-agent` to avoid the current SDK/CLI namespaces. See MIGRATION-2.md for upgrading shared 1.x installations. OpenAI monkey patching remains a legacy Completions integration; use the dedicated middleware for current Agents SDK integration.
 
 ## Follow-up hardening
 

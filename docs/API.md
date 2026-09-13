@@ -21,10 +21,10 @@ Auto-instrument any function with JEP events.
 
 ## Adapters
 
-### `import jep.adapters.langchain.auto`
+### `import jep_agent.adapters.langchain.auto`
 Global monkey-patch. All LangChain AgentExecutor runs auto-record.
 
-### `import jep.adapters.openai_agents.auto`
+### `import jep_agent.adapters.openai_agents.auto`
 Global monkey-patch. All OpenAI chat completions auto-record.
 
 ### `JEPMCPServer(name)` — MCP
@@ -37,11 +37,11 @@ Runtime gate. Decorated functions are blocked if evidence is insufficient.
 
 ## CLI
 
-### `jep web [--port 8080]`
+### `jep-agent web [--port 8080]`
 Launch causal topology viewer.
 
-### `jep verify &lt;file.jsonl&gt; [--public-key key.pem]`
+### `jep-agent verify &lt;file.jsonl&gt; [--public-key key.pem]`
 Verify event signatures and chain integrity.
 
-### `jep export &lt;file.jsonl&gt; --output report.html`
+### `jep-agent export &lt;file.jsonl&gt; --output report.html`
 Export full audit report with embedded causal graph.

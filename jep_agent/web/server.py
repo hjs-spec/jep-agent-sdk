@@ -31,4 +31,4 @@ async def upload(file: UploadFile = File(...)):
 def start_server(host="127.0.0.1", port=8080, reload=False):
     import uvicorn
 
-    uvicorn.run("jep.web.server:app", host=host, port=port, reload=reload)
+    uvicorn.run("jep_agent.web.server:app", host=host, port=port, reload=reload)

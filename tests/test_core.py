@@ -2,8 +2,8 @@
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep.core.chain import AuditChain
-from jep.core.event import build_event, canonicalize, event_hash
+from jep_agent.core.chain import AuditChain
+from jep_agent.core.event import build_event, canonicalize, event_hash
 
 
 def test_build_event_structure():

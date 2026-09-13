@@ -1,5 +1,3 @@
-# Release 1.0.1
+# Release 2.0.0
 
-Includes the reviewed September 2026 integrity, replay, persistence, async-lifecycle and compatibility repairs applicable to this repository. Wire/profile versions are unchanged unless explicitly described in the repository hardening notes.
-
-See HARDENING.md for supported verification scopes and migration boundaries. Registry publication and service deployment are reported by their workflows; a source merge alone is not a published package.
+Fix the Python namespace and CLI command collisions with the current JEP clients. Import the legacy SDK as `jep_agent` and run `jep-agent`; see MIGRATION-2.md for existing shared installations. Historical JEP-04/JAC-01 signed events remain unchanged. Internal imports, adapters, examples, Docker and CI use the new namespace.

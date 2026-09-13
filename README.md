@@ -1,5 +1,7 @@
 > Historical repository.
 >
+
+Version 2 uses `from jep_agent import ...` and the `jep-agent` command. This removes the package/command collisions with the current `jep-sdk-py` and `jep-cli`. The historical JEP-04/JAC-01 event format is retained. See [migration](MIGRATION-2.md).
 > This repository reflects an earlier design line and is no longer the current implementation track.
 >
 > Current versions:
@@ -9,7 +11,7 @@
 > - HJS v0.5: https://github.com/hjs-spec/hjs-05
 > - JAC v0.5: https://github.com/hjs-spec/jac-agent-02
 
-# JEP-Agent SDK 1.0
+# JEP-Agent SDK 2.0
 
 [![IETF Draft](https://img.shields.io/badge/IETF-JEP--04-blue)](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/)
 [![IETF Draft](https://img.shields.io/badge/IETF-JAC--01-purple)](https://datatracker.ietf.org/doc/draft-wang-jac-01/)
@@ -41,8 +43,8 @@ pip install jep-agent-sdk[langchain,openai]
 ## 30-Second Quickstart
 
 ```python
-from jep import trace
-from jep.recorder import record
+from jep_agent import trace
+from jep_agent.recorder import record
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 trace.enable(issuer="did:example:agent-001", private_key=Ed25519PrivateKey.generate())
@@ -61,16 +63,16 @@ trace.view()   # See the J/D/T/V event chain in your terminal
 
 | Framework | Integration | Your Code Changes |
 |-----------|-------------|-------------------|
-| **LangChain** | `import jep.adapters.langchain.auto` | Experimental patch |
-| **OpenAI Chat Completions (legacy)** | `import jep.adapters.openai_agents.auto` | Experimental patch |
-| **MCP** | `from jep.adapters.mcp import JEPMCPServer` | **One line** |
+| **LangChain** | `import jep_agent.adapters.langchain.auto` | Experimental patch |
+| **OpenAI Chat Completions (legacy)** | `import jep_agent.adapters.openai_agents.auto` | Experimental patch |
+| **MCP** | `from jep_agent.adapters.mcp import JEPMCPServer` | **One line** |
 
 ---
 
 ## Causal Web Viewer
 
 ```bash
-jep web --port 8080
+jep-agent web --port 8080
 ```
 
 Drag-and-drop your `events.jsonl`. Get an interactive force-directed causal graph. Click any node to inspect the full JEP event. Pan, zoom, export.
@@ -80,7 +82,7 @@ Drag-and-drop your `events.jsonl`. Get an interactive force-directed causal grap
 ## Determinability Guard — Stop Agents from Guessing
 
 ```python
-from jep.determinability import DeterminabilityGuard
+from jep_agent.determinability import DeterminabilityGuard
 
 guard = DeterminabilityGuard(
     evidence_fn=lambda ctx: len(ctx.get("tools_used", [])),
@@ -103,10 +105,10 @@ def my_agent(query: str, tools_used: list) -> str:
 
 ```bash
 # Verify signatures, chains, and anti-replay
-jep verify events.jsonl --public-key key.pem
+jep-agent verify events.jsonl --public-key key.pem
 
 # Export a full compliance report (HTML with embedded causal graph)
-jep export events.jsonl --output report.html
+jep-agent export events.jsonl --output report.html
 ```
 
 ---
@@ -129,7 +131,7 @@ Signing is optional at recording time. Unsigned events are unverified. This hist
 ## Project Structure
 
 ```
-jep/
+jep_agent/
 ├── core/           # JEP-04 protocol engine (event, crypto, verifier, chain)
 ├── primitives.py   # J/D/T/V convenience wrappers
 ├── recorder.py     # @record decorator + global trace manager
@@ -141,7 +143,7 @@ jep/
 │   ├── openai_agents.py  # TRUE zero-code auto-patch
 │   └── mcp.py            # MCP server wrapper
 ├── cli/
-│   └── main.py     # jep web | jep verify | jep export
+│   └── main.py     # jep-agent web | jep-agent verify | jep-agent export
 └── web/
     └── static/
         └── index.html   # Drag-and-drop causal topology viewer

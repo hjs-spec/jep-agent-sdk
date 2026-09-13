@@ -2,7 +2,7 @@
 
 import pytest
 
-from jep.adapters.mcp import JEPMCPServer
+from jep_agent.adapters.mcp import JEPMCPServer
 
 
 def test_mcp_server():

@@ -4,7 +4,7 @@ JAC-01 extension support.
 
 from typing import Any, Callable, Dict, Optional
 
-from jep.core.event import build_event
+from jep_agent.core.event import build_event
 
 
 def build_jac_event(
@@ -16,7 +16,7 @@ def build_jac_event(
     **kwargs,
 ) -> Dict[str, Any]:
     """Build JAC-01 compliant event with task_based_on."""
-    from jep.primitives import _content_to_what
+    from jep_agent.primitives import _content_to_what
 
     what = _content_to_what(content)
     return build_event(

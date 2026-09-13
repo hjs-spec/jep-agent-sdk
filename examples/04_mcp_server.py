@@ -2,7 +2,7 @@
 Example 4: MCP server with JEP recording.
 """
 
-from jep.adapters.mcp import JEPMCPServer
+from jep_agent.adapters.mcp import JEPMCPServer
 
 
 def read_file(path: str) -> str:

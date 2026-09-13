@@ -2,7 +2,7 @@
 
 import pytest
 
-from jep.determinability import (
+from jep_agent.determinability import (
     DeterminabilityGuard,
     check_determinability,
 )

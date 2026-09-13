@@ -1,13 +1,13 @@
 """
 Legacy OpenAI Chat Completions instrumentation; current Agents SDK uses the separate middleware.
 Usage:
-    import jep.adapters.openai_agents.auto   # <-- All agent runs recorded automatically.
+    import jep_agent.adapters.openai_agents.auto   # <-- All agent runs recorded automatically.
 """
 
 import sys
 
-from jep.core.chain import AuditChain
-from jep.primitives import judge, terminate, verify
+from jep_agent.core.chain import AuditChain
+from jep_agent.primitives import judge, terminate, verify
 
 
 class _OpenAIJEPTracer:
@@ -15,7 +15,7 @@ class _OpenAIJEPTracer:
         self.chain = AuditChain(issuer=issuer, private_key=private_key)
 
     def trace_run(self, original_run):
-        from jep.recorder import record
+        from jep_agent.recorder import record
 
         return record(original_run, issuer=self.chain.issuer, chain=self.chain)
 
@@ -33,7 +33,7 @@ def auto_patch():
             return
 
         def _traced_create(self, *args, **kwargs):
-            from jep.recorder import trace
+            from jep_agent.recorder import trace
 
             if not trace.enabled or trace.chain is None:
                 trace.enable(issuer="openai:chat")

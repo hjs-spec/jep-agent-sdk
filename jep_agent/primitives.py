@@ -5,7 +5,7 @@ J/D/T/V primitives — thin wrappers around build_event.
 import json
 from typing import Any, Dict, Optional
 
-from jep.core.event import _compute_what, build_event
+from jep_agent.core.event import _compute_what, build_event
 
 
 def _content_to_what(content: Any) -> Optional[str]:
