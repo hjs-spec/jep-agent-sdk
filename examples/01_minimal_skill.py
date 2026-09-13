@@ -2,7 +2,7 @@
 Example 1: Minimal JEP skill with bare primitives.
 """
 
-from jep import judge, verify, AuditChain
+from jep_agent import judge, verify, AuditChain
 
 
 def main():

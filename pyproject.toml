@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jep-agent-sdk"
-version = "1.0.1"
-description = "JEP-Agent SDK 1.0 — Legacy reference implementation of JEP-04 and JAC-01"
+version = "2.0.0"
+description = "JEP-Agent SDK 2.0 — Legacy reference implementation of JEP-04 and JAC-01"
 readme = "README.md"
 license = "BSD-3-Clause"
 requires-python = ">=3.10"
@@ -41,7 +41,7 @@ openai = ["openai>=1.0.0"]
 dev = ["pytest>=8.0.0", "pytest-cov>=6.0", "pytest-asyncio>=0.24.0", "httpx>=0.24.0", "black>=24.0.0", "ruff>=0.3.0"]
 
 [project.scripts]
-jep = "jep.cli.main:cli"
+jep-agent = "jep_agent.cli.main:cli"
 
 [project.urls]
 Homepage = "https://github.com/hjs-spec/jep-agent-sdk"
@@ -50,7 +50,7 @@ Repository = "https://github.com/hjs-spec/jep-agent-sdk"
 Issues = "https://github.com/hjs-spec/jep-agent-sdk/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["jep"]
+packages = ["jep_agent"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

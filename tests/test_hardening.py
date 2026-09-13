@@ -3,10 +3,10 @@ import asyncio
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep.core.chain import AuditChain
-from jep.core.event import build_event, sign_event, verify_event_signature
-from jep.core.verifier import JEPVerifier
-from jep.recorder import record
+from jep_agent.core.chain import AuditChain
+from jep_agent.core.event import build_event, sign_event, verify_event_signature
+from jep_agent.core.verifier import JEPVerifier
+from jep_agent.recorder import record
 
 
 def test_first_event_tamper_and_unsigned_chain_are_rejected():
@@ -67,7 +67,7 @@ async def test_async_lifecycle_waits_for_actual_completion(outcome):
 
 
 def test_langchain_callback_start_and_error_cleanup():
-    from jep.adapters.langchain import _JEPCallbackHandler
+    from jep_agent.adapters.langchain import _JEPCallbackHandler
 
     handler = _JEPCallbackHandler()
     handler.on_chain_start(inputs={"question": "test"})

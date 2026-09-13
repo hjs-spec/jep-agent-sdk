@@ -8,7 +8,7 @@ import os
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
-from jep.core.event import canonicalize, sign_event, verify_event_signature
+from jep_agent.core.event import canonicalize, sign_event, verify_event_signature
 
 
 class AuditChain:

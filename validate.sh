@@ -5,12 +5,12 @@ echo "========== JEP-Agent SDK 1.0 全面运行验证 =========="
 
 # 1. 基础导入
 echo -e "\n[1/6] 基础导入..."
-python3 -c "from jep import judge, verify, trace, DeterminabilityGuard; print('✓ 核心模块导入成功')"
+python3 -c "from jep_agent import judge, verify, trace, DeterminabilityGuard; print('✓ 核心模块导入成功')"
 
 # 2. 生成真实 JEP 事件（注意：judge/verify 已内置 verb，不可重复传入）
 echo -e "\n[2/6] 生成 JEP 事件..."
 python3 << 'PYEOF'
-from jep import judge, verify, AuditChain
+from jep_agent import judge, verify, AuditChain
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 key = Ed25519PrivateKey.generate()
@@ -25,12 +25,12 @@ PYEOF
 
 # 3. CLI 验证
 echo -e "\n[3/6] CLI 验证..."
-jep verify demo_events.jsonl
+jep-agent verify demo_events.jsonl
 
 # 4. 导出合规报告（Python 直接生成，不依赖 CLI 子命令）
 echo -e "\n[4/6] 导出合规报告..."
 python3 << 'PYEOF'
-from jep import AuditChain
+from jep_agent import AuditChain
 chain = AuditChain.load("demo_events.jsonl")
 events = chain.events if hasattr(chain, 'events') else list(chain)
 html = "<html><body><h1>JEP Audit Report</h1><table border='1'>"
@@ -45,14 +45,14 @@ PYEOF
 
 # 5. Web 服务
 echo -e "\n[5/6] Web 服务..."
-timeout 5 jep web --port 8080 &
+timeout 5 jep-agent web --port 8080 &
 sleep 2
 curl -s http://127.0.0.1:8080 > /dev/null && echo "✓ Web 服务响应正常" || echo "✗ Web 服务未响应"
 
 # 6. 运行时门控
 echo -e "\n[6/6] 运行时门控..."
 python3 << 'PYEOF'
-from jep.determinability import DeterminabilityGuard
+from jep_agent.determinability import DeterminabilityGuard
 
 guard = DeterminabilityGuard(
     evidence_fn=lambda ctx: len(ctx.get("tools_used", [])),

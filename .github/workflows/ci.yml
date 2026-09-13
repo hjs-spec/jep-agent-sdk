@@ -29,14 +29,25 @@ jobs:
 
     - name: Lint
       run: |
-        ruff check jep/ tests/
-        black --check jep/ tests/
+        ruff check jep_agent/ tests/
+        black --check jep_agent/ tests/
 
     - name: Test
-      run: python -m pytest tests/ -v --cov=jep --cov-report=xml
+      run: python -m pytest tests/ -v --cov=jep_agent --cov-report=xml
 
     - name: Upload coverage
       uses: codecov/codecov-action@v4
       with:
         files: ./coverage.xml
         fail_ci_if_error: false
+
+  package-coexistence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install build
+      - run: python -m build --wheel
+      - run: python scripts/check_coexistence.py dist/*.whl

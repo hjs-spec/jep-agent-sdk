@@ -1,14 +1,14 @@
 """
 LangChain integration — TRUE zero-code tracing.
 Usage:
-    import jep.adapters.langchain.auto   # <-- That's it.
+    import jep_agent.adapters.langchain.auto   # <-- That's it.
 """
 
 import sys
 from typing import Any, Dict, List, Optional
 
-from jep.core.chain import AuditChain
-from jep.primitives import judge, terminate, verify
+from jep_agent.core.chain import AuditChain
+from jep_agent.primitives import judge, terminate, verify
 
 
 class _JEPCallbackHandler:

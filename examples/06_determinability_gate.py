@@ -2,7 +2,7 @@
 Example 6: DeterminabilityGuard — runtime evidence gate.
 """
 
-from jep.determinability import DeterminabilityGuard
+from jep_agent.determinability import DeterminabilityGuard
 
 
 def my_risky_agent(query: str, tools_used: list) -> str:

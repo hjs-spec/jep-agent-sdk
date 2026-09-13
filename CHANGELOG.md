@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0
+
+- Move the legacy Python namespace to `jep_agent` and CLI to `jep-agent`; see MIGRATION-2.md.
+- Retain historical event/signature compatibility.
+
 ## 1.0.0 (2026-04-26)
 
 - Initial release

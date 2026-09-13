@@ -1,9 +1,9 @@
 """
 Example 2: LangChain — TRUE zero-code integration.
-Just import jep.adapters.langchain.auto and run your existing code.
+Just import jep_agent.adapters.langchain.auto and run your existing code.
 """
 
-import jep.adapters.langchain.auto  # <-- ONE LINE. That's it.
+import jep_agent.adapters.langchain.auto  # <-- ONE LINE. That's it.
 
 # Your EXISTING LangChain code — zero changes needed
 class FakeAgent:

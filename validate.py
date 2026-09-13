@@ -3,10 +3,10 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from jep.core.chain import AuditChain
-from jep.core.event import event_hash, verify_event_signature
-from jep.core.verifier import JEPVerifier
-from jep.primitives import judge, verify
+from jep_agent.core.chain import AuditChain
+from jep_agent.core.event import event_hash, verify_event_signature
+from jep_agent.core.verifier import JEPVerifier
+from jep_agent.primitives import judge, verify
 
 
 def main():

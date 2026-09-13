@@ -2,7 +2,7 @@
 Example 3: OpenAI Agents — TRUE zero-code.
 """
 
-import jep.adapters.openai_agents.auto  # <-- ONE LINE
+import jep_agent.adapters.openai_agents.auto  # <-- ONE LINE
 
 # Your existing OpenAI code continues to work unchanged
 

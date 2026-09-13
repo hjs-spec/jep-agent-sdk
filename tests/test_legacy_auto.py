@@ -1,7 +1,7 @@
 import sys
 from types import SimpleNamespace
 
-from jep.recorder import trace
+from jep_agent.recorder import trace
 
 
 def test_legacy_auto_retains_events_and_does_not_double_wrap(monkeypatch):
@@ -15,7 +15,7 @@ def test_legacy_auto_retains_events_and_does_not_double_wrap(monkeypatch):
         )
     )
     monkeypatch.setitem(sys.modules, "openai", mock)
-    from jep.adapters.openai_agents import auto_patch
+    from jep_agent.adapters.openai_agents import auto_patch
 
     trace.enable(issuer="legacy:test")
     try:

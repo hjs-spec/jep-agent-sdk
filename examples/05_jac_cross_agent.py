@@ -2,8 +2,8 @@
 Example 5: JAC-01 cross-agent judgment chain.
 """
 
-from jep.extensions.jac import build_jac_event
-from jep.core.chain import AuditChain
+from jep_agent.extensions.jac import build_jac_event
+from jep_agent.core.chain import AuditChain
 
 
 def main():

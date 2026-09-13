@@ -4,8 +4,8 @@ import time
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep.core.event import sign_event
-from jep.core.verifier import JEPVerifier
+from jep_agent.core.event import sign_event
+from jep_agent.core.verifier import JEPVerifier
 
 
 def test_valid_event():

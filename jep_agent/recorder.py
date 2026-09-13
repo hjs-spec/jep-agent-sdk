@@ -6,8 +6,8 @@ import functools
 import inspect
 from typing import Callable, Optional
 
-from jep.core.chain import AuditChain
-from jep.primitives import judge, terminate, verify
+from jep_agent.core.chain import AuditChain
+from jep_agent.primitives import judge, terminate, verify
 
 
 class TraceManager:

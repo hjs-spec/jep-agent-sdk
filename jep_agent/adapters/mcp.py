@@ -4,8 +4,8 @@ MCP (Model Context Protocol) adapter for JEP-04.
 
 from typing import Callable
 
-from jep.core.chain import AuditChain
-from jep.recorder import record
+from jep_agent.core.chain import AuditChain
+from jep_agent.recorder import record
 
 
 def wrap_mcp_tool(tool_func: Callable, issuer: str = "mcp:agent", private_key=None) -> Callable:

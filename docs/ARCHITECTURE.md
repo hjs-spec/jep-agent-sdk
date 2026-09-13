@@ -24,7 +24,7 @@
 
 1. **Narrow Waist**: Core is minimal (~800 lines). Everything else is adapter/extension.
 2. **RFC Compliance**: Strict JEP-04 (RFC 8785 JCS, JWS EdDSA).
-3. **True Zero-Code**: `import jep.adapters.xxx.auto` — no business code changes.
+3. **True Zero-Code**: `import jep_agent.adapters.xxx.auto` — no business code changes.
 4. **Privacy by Default**: Supports digest-only, TTL, identity rotation.
 5. **Causal Observability**: DeterminabilityGuard prevents execution on insufficient evidence.
 ```

@@ -7,12 +7,12 @@ test:
 	pytest tests/ -v --tb=short
 
 lint:
-	ruff check jep/ tests/
-	black --check jep/ tests/
+	ruff check jep_agent/ tests/
+	black --check jep_agent/ tests/
 
 format:
-	black jep/ tests/
-	ruff check --fix jep/ tests/
+	black jep_agent/ tests/
+	ruff check --fix jep_agent/ tests/
 
 clean:
 	rm -rf build/ dist/ *.egg-info .pytest_cache htmlcov/
@@ -25,7 +25,7 @@ publish:
 	python -m twine upload dist/*
 
 web:
-	jep web --port 8080 --reload
+	jep-agent web --port 8080 --reload
 
 docker:
 	docker build -t jep-agent-sdk:latest -f docker/Dockerfile .

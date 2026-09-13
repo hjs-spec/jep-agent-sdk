@@ -2,8 +2,8 @@
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep.core.chain import AuditChain
-from jep.primitives import judge
+from jep_agent.core.chain import AuditChain
+from jep_agent.primitives import judge
 
 
 def test_audit_chain_save_load(tmp_path):

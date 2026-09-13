@@ -2,7 +2,7 @@
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep.core.event import (
+from jep_agent.core.event import (
     build_event,
     sign_event,
     verify_event_signature,
