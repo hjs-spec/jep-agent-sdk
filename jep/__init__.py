@@ -47,4 +47,4 @@ __all__ = [
     "verify_jac_core",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
