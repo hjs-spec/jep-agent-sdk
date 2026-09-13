@@ -3,12 +3,29 @@ JEP CLI — jep-agent web, jep-agent verify, jep-agent export (causal report)
 """
 
 import json
+from html import escape
 
 import click
 from rich.console import Console
 from rich.table import Table
 
 console = Console()
+
+
+def _read_events(file):
+    events = []
+    with open(file, "r", encoding="utf-8") as handle:
+        for number, line in enumerate(handle, 1):
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except ValueError as exc:
+                raise click.ClickException(f"Invalid JSON on line {number}") from exc
+            if not isinstance(event, dict):
+                raise click.ClickException(f"Event on line {number} must be an object")
+            events.append(event)
+    return events
 
 
 @click.group()
@@ -37,6 +54,7 @@ def verify(file, public_key, aud):
     """Verify JEP events (signature, chain, replay)."""
     from cryptography.hazmat.primitives import serialization
 
+    from jep_agent.core.event import event_hash
     from jep_agent.core.verifier import JEPVerifier
 
     verifier = JEPVerifier()
@@ -45,9 +63,9 @@ def verify(file, public_key, aud):
         with open(public_key, "rb") as f:
             pk = serialization.load_pem_public_key(f.read())
 
-    events = []
-    with open(file, "r") as f:
-        events = [json.loads(line) for line in f if line.strip()]
+    events = _read_events(file)
+    if not events:
+        raise click.ClickException("No events to verify")
 
     table = Table(title="JEP Verification Results")
     table.add_column("Verb", style="cyan")
@@ -56,12 +74,23 @@ def verify(file, public_key, aud):
 
     valid = 0
     invalid = 0
+    known_hashes = set()
     for ev in events:
-        result = verifier.verify(ev, public_key=pk, expected_aud=aud)
+        result = verifier.verify(
+            ev,
+            public_key=pk,
+            expected_aud=aud,
+            task_parent_lookup=lambda parent: isinstance(parent, str) and parent in known_hashes,
+        )
+        if result == "VALID":
+            if ev.get("ref") is not None and ev["ref"] not in known_hashes:
+                result = "INVALID: reference not found in prior verified events"
+            else:
+                known_hashes.add(event_hash(ev))
         color = "green" if result == "VALID" else "yellow" if "FAULT" in result else "red"
         table.add_row(
-            ev.get("verb", "?"),
-            ev["nonce"][:8],
+            str(ev.get("verb", "?")),
+            str(ev.get("nonce", "?"))[:8],
             f"[{color}]{result}[/{color}]",
         )
         if result == "VALID":
@@ -73,6 +102,8 @@ def verify(file, public_key, aud):
     console.print(
         f"[bold]Events: {len(events)} | Valid: {valid} | Invalid: {invalid}[/bold]"  # noqa: E501
     )
+    if invalid:
+        raise click.exceptions.Exit(1)
 
 
 @cli.command()
@@ -81,9 +112,7 @@ def verify(file, public_key, aud):
 @click.option("--title", default="JEP Audit Report", help="Report title")
 def export(file, output, title):
     """Export a full causal audit report (HTML with embedded graph)."""
-    events = []
-    with open(file, "r") as f:
-        events = [json.loads(line) for line in f if line.strip()]
+    events = _read_events(file)
 
     html = _generate_full_report(events, title)
     with open(output, "w", encoding="utf-8") as f:
@@ -92,9 +121,12 @@ def export(file, output, title):
 
 
 def _generate_full_report(events, title):
+    from jep_agent.core.event import event_hash
+
+    title = escape(str(title))
     nodes_data = [
         {
-            "id": e.get("event_id", i),
+            "id": event_hash(e),
             "verb": e.get("verb"),
             "who": e.get("who"),
             "when": e.get("when"),
@@ -104,7 +136,7 @@ def _generate_full_report(events, title):
             "task_based_on": e.get("task_based_on"),
             "sig": bool(e.get("sig")),
         }
-        for i, e in enumerate(events)
+        for e in events
     ]
 
     total = len(events)
@@ -114,11 +146,11 @@ def _generate_full_report(events, title):
 
     rows = []
     for e in events:
-        verb = e.get("verb", "?")
-        who = e.get("who", "")
-        when = e.get("when", "")
-        what = str(e.get("what", ""))[:60]
-        ref = str(e.get("ref", ""))[:20]
+        verb = escape(str(e.get("verb", "?")))
+        who = escape(str(e.get("who", "")))
+        when = escape(str(e.get("when", "")))
+        what = escape(str(e.get("what", ""))[:60])
+        ref = escape(str(e.get("ref", ""))[:20])
         signed_mark = "✓" if e.get("sig") else "—"
         rows.append(
             f"<tr>"
@@ -130,6 +162,12 @@ def _generate_full_report(events, title):
             f"</tr>"
         )
 
+    script_data = (
+        json.dumps(nodes_data)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
     html = (
         "<!DOCTYPE html>\n"
         "<html>\n"
@@ -194,7 +232,7 @@ def _generate_full_report(events, title):
         "<th>What</th><th>Ref</th><th>Signed</th></tr>\n" + "".join(rows) + "</table>\n"
         "</div>\n"
         "<script>\n"
-        f"const nodes = {json.dumps(nodes_data)};\n"
+        f"const nodes = {script_data};\n"
         "const links = [];\n"
         "const nodeMap = new Map();\n"
         "nodes.forEach((n,i) => nodeMap.set(n.id, i));\n"
