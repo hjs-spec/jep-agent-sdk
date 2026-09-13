@@ -43,7 +43,7 @@
         <div class="stats">
             <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Events</div></div>
             <div class="stat"><div class="num" id="statChains">0</div><div class="label">Chains</div></div>
-            <div class="stat"><div class="num" id="statValid">0</div><div class="label">Valid</div></div>
+            <div class="stat" title="Signature present; cryptographic verification has not been performed"><div class="num" id="statSigned">0</div><div class="label">Signed (unverified)</div></div>
         </div>
     </div>
     
@@ -83,7 +83,7 @@
         const fileInput = document.getElementById('fileInput');
         const uploadOverlay = document.getElementById('uploadOverlay');
         const sidebar = document.getElementById('sidebar');
-        let events = [], nodes = [], links = [], simulation = null;
+        let events = [], eventHashes = [], nodes = [], links = [], simulation = null;
         let currentTransform = { x: 0, y: 0, k: 1 };
         
         dropZone.addEventListener('click', () => fileInput.click());
@@ -92,14 +92,42 @@
         dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = '#334155'; if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
         fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
         
+        function canonicalJSON(value) {
+            if (value === null || typeof value !== 'object') {
+                if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Non-finite number');
+                return JSON.stringify(value);
+            }
+            if (Array.isArray(value)) return '[' + value.map(canonicalJSON).join(',') + ']';
+            return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonicalJSON(value[key])).join(',') + '}';
+        }
+
+        async function legacyEventHash(event) {
+            const unsigned = { ...event };
+            delete unsigned.sig;
+            const bytes = new TextEncoder().encode(canonicalJSON(unsigned));
+            const digest = await crypto.subtle.digest('SHA-256', bytes);
+            return 'sha256:' + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function setEvents(imported) {
+            if (!Array.isArray(imported) || imported.some(e => !e || typeof e !== 'object' || Array.isArray(e))) throw new Error('Expected event objects');
+            const hashes = await Promise.all(imported.map(legacyEventHash));
+            events = imported;
+            eventHashes = hashes;
+            uploadOverlay.classList.add('hidden');
+            renderGraph();
+            updateStats();
+        }
+
         function loadFile(file) {
             const reader = new FileReader();
-            reader.onload = e => {
-                const lines = e.target.result.split('\n').filter(l => l.trim());
-                events = lines.map(l => JSON.parse(l));
-                uploadOverlay.classList.add('hidden');
-                renderGraph();
-                updateStats();
+            reader.onload = async e => {
+                try {
+                    const lines = e.target.result.split('\n').filter(l => l.trim());
+                    await setEvents(lines.map(l => JSON.parse(l)));
+                } catch (error) {
+                    alert('Could not load events: ' + error.message);
+                }
             };
             reader.readAsText(file);
         }
@@ -109,7 +137,7 @@
             const chains = new Set();
             events.forEach(e => { if(e.ref) chains.add(e.ref); if(e.task_based_on) chains.add(e.task_based_on); });
             document.getElementById('statChains').textContent = chains.size;
-            document.getElementById('statValid').textContent = events.filter(e => e.sig && e.sig !== '').length;
+            document.getElementById('statSigned').textContent = events.filter(e => typeof e.sig === 'string' && e.sig !== '').length;
         }
         
         function renderGraph() {
@@ -119,7 +147,7 @@
             const height = svg.clientHeight || 600;
             
             nodes = events.map((e, i) => ({
-                id: e.event_id || i,
+                id: eventHashes[i],
                 index: i,
                 data: e,
                 x: width/2 + (Math.random()-0.5)*200,

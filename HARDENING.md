@@ -21,4 +21,14 @@ Legacy-04 embedded EdDSA signatures and legacy unsigned-event link hashes remain
 
 ## Follow-up hardening
 
+`jep-agent verify` exits nonzero for invalid/unverified, empty, or malformed
+archives. References must resolve to earlier verified events in the input;
+include the referenced ancestors when checking an archive segment. This command
+retains the legacy verifier's freshness policy.
+
+HTML exports escape all event text and protect embedded JSON from script-element
+termination. Export and browser graph nodes use the SDK's unsigned-event JCS
+hashes, so ordinary legacy references resolve. The viewer labels signature
+presence as **Signed (unverified)** and does not claim cryptographic validation.
+
 The legacy synchronous Chat Completions patch is idempotent and retains events in the public trace manager instead of discarding each call chain. Quickstart now uses explicit @record instrumentation and a signing key. Documentation distinguishes this historical adapter from the current Agents SDK middleware and removes unsupported production/standardization claims.
