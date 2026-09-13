@@ -3,7 +3,8 @@
 """
 
 import functools
-from typing import Any, Callable, Optional
+import inspect
+from typing import Callable, Optional
 
 from jep.core.chain import AuditChain
 from jep.primitives import judge, terminate, verify
@@ -65,35 +66,50 @@ def record(
         chain = AuditChain(issuer=issuer, private_key=private_key)
 
     def decorator(f: Callable) -> Callable:
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs) -> Any:
-            content = {
-                "function": f.__name__,
-                "args": repr(args),
-                "kwargs": repr(kwargs),
-            }
-            j_event = judge(who=issuer, content=content)
-            chain.append(j_event)
+        def start(args, kwargs):
+            chain.append(
+                judge(
+                    who=issuer,
+                    content={
+                        "function": f.__name__,
+                        "args": repr(args),
+                        "kwargs": repr(kwargs),
+                    },
+                )
+            )
 
+        def finish(result=None, error=None):
+            content = (
+                {"error": f"error:{type(error).__name__}"}
+                if error is not None
+                else {"result": repr(result)}
+            )
+            primitive = verify if error is None and auto_verify else terminate
+            chain.append(primitive(who=issuer, content=content))
+
+        @functools.wraps(f)
+        def sync_wrapper(*args, **kwargs):
+            start(args, kwargs)
             try:
                 result = f(*args, **kwargs)
-                status = "success"
-                result_content = {"result": repr(result)}
-            except Exception as e:
-                result = None
-                status = f"error:{type(e).__name__}"
-                result_content = {"error": status}
+            except BaseException as exc:
+                finish(error=exc)
                 raise
-            finally:
-                if auto_verify and status == "success":
-                    v_event = verify(who=issuer, content=result_content)
-                    chain.append(v_event)
-                else:
-                    t_event = terminate(who=issuer, content=result_content)
-                    chain.append(t_event)
-
+            finish(result=result)
             return result
 
+        @functools.wraps(f)
+        async def async_wrapper(*args, **kwargs):
+            start(args, kwargs)
+            try:
+                result = await f(*args, **kwargs)
+            except BaseException as exc:
+                finish(error=exc)
+                raise
+            finish(result=result)
+            return result
+
+        wrapper = async_wrapper if inspect.iscoroutinefunction(f) else sync_wrapper
         wrapper._jep_chain = chain
         return wrapper
 

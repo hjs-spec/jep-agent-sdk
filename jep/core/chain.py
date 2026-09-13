@@ -5,9 +5,10 @@ Audit chain maintenance with hash-linking.
 import hashlib
 import json
 import os
+from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
-from jep.core.event import canonicalize, sign_event, verify_payload_integrity
+from jep.core.event import canonicalize, sign_event, verify_event_signature
 
 
 class AuditChain:
@@ -23,6 +24,7 @@ class AuditChain:
         self.storage_path = storage_path
 
     def append(self, event: Dict[str, Any]) -> Dict[str, Any]:
+        event = deepcopy(event)
         event["who"] = self.issuer
 
         if self.events:
@@ -39,9 +41,20 @@ class AuditChain:
         if self.storage_path:
             self._flush()
 
-        return event
+        return deepcopy(event)
 
-    def verify_chain(self) -> bool:
+    def verify_chain(self, public_key=None) -> bool:
+        """Verify signatures and legacy-04 links, including the first event.
+
+        Imported archives need the trusted public key. Unsigned traces cannot
+        establish integrity and never return True from this method.
+        """
+        if public_key is None and self.private_key is not None:
+            public_key = self.private_key.public_key()
+        if not self.events or public_key is None:
+            return False
+        if not all(verify_event_signature(ev, public_key) for ev in self.events):
+            return False
         for i in range(1, len(self.events)):
             prev = self.events[i - 1]
             curr = self.events[i]
@@ -50,13 +63,10 @@ class AuditChain:
             if curr.get("ref") != expected_ref:
                 return False
 
-            if not verify_payload_integrity(curr):
-                return False
-
         return True
 
     def export(self) -> List[Dict[str, Any]]:
-        return self.events
+        return deepcopy(self.events)
 
     def save(self, path: Optional[str] = None):
         target = path or self.storage_path

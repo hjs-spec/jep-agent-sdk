@@ -15,36 +15,9 @@ class _OpenAIJEPTracer:
         self.chain = AuditChain(issuer=issuer, private_key=private_key)
 
     def trace_run(self, original_run):
-        def wrapper(*args, **kwargs):
-            content = {
-                "type": "agent_run",
-                "args": repr(args),
-                "kwargs": repr(kwargs),
-            }
-            j_ev = judge(who=self.chain.issuer, content=content)
-            self.chain.append(j_ev)
+        from jep.recorder import record
 
-            try:
-                result = original_run(*args, **kwargs)
-                status = "success"
-                result_content = {"result": repr(result)[:500]}
-            except Exception as e:
-                result = None
-                status = f"error:{type(e).__name__}"
-                result_content = {"error": str(e)[:500]}
-                raise
-            finally:
-                if status == "success":
-                    v_ev = verify(who=self.chain.issuer, content=result_content)
-                    self.chain.append(v_ev)
-                else:
-                    t_ev = terminate(who=self.chain.issuer, content=result_content)
-                    self.chain.append(t_ev)
-
-            return result
-
-        wrapper._jep_chain = self.chain
-        return wrapper
+        return record(original_run, issuer=self.chain.issuer, chain=self.chain)
 
 
 def auto_patch():
@@ -67,11 +40,13 @@ def auto_patch():
             j_ev = judge(who=tracer.chain.issuer, content=content)
             tracer.chain.append(j_ev)
 
+            status = "error:interrupted"
+            result_content = {"error": status}
             try:
                 result = _orig(self, *args, **kwargs)
                 status = "success"
                 result_content = {"completion": str(result)[:300]}
-            except Exception as e:
+            except BaseException as e:
                 result = None
                 status = f"error:{type(e).__name__}"
                 result_content = {"error": str(e)}

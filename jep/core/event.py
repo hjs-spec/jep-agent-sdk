@@ -122,7 +122,7 @@ def sign_event(ev: Dict[str, Any], private_key) -> Dict[str, Any]:
 
 
 def verify_event_signature(ev: Dict[str, Any], public_key) -> bool:
-    if not HAS_CRYPTO or not ev.get("sig"):
+    if not HAS_CRYPTO or not isinstance(ev.get("sig"), str) or not ev["sig"]:
         return False
 
     if not isinstance(public_key, Ed25519PublicKey):
@@ -136,6 +136,16 @@ def verify_event_signature(ev: Dict[str, Any], public_key) -> bool:
     signing_input = (protected_b64 + "." + payload_b64).encode("utf-8")
 
     try:
+        header = json.loads(_base64url_decode(protected_b64))
+        if (
+            not isinstance(header, dict)
+            or header.get("alg") != "EdDSA"
+            or "crit" in header
+            or header.get("b64", True) is not True
+        ):
+            return False
+        if _base64url_decode(payload_b64) != canonicalize(ev):
+            return False
         sig_bytes = _base64url_decode(sig_b64)
         public_key.verify(sig_bytes, signing_input)
         return True
@@ -144,8 +154,8 @@ def verify_event_signature(ev: Dict[str, Any], public_key) -> bool:
 
 
 def verify_payload_integrity(ev: Dict[str, Any]) -> bool:
-    if not ev.get("sig"):
-        return True
+    if not isinstance(ev.get("sig"), str) or not ev["sig"]:
+        return False
 
     parts = ev["sig"].split(".")
     if len(parts) != 3:
