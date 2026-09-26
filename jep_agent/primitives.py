@@ -1,63 +1,53 @@
-"""
-J/D/T/V primitives — thin wrappers around build_event.
-"""
+"""J/D/T/V convenience constructors for JEP Core 0.7."""
 
-import json
 from typing import Any, Dict, Optional
 
-from jep_agent.core.event import _compute_what, build_event
+from jep_agent.core.event import build_event
 
 
-def _content_to_what(content: Any) -> Optional[str]:
-    if content is None:
-        return None
-    if isinstance(content, str):
-        data = content.encode("utf-8")
-    else:
-        data = json.dumps(content, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return _compute_what(data, "sha256")
-
-
-def judge(
-    who: str,
-    content: Any = None,
-    what: Optional[str] = None,
-    **kwargs,
-) -> Dict[str, Any]:
-    if what is None and content is not None:
-        what = _content_to_what(content)
+def judge(who: str, content: Any = None, what: Any = None, **kwargs) -> Dict[str, Any]:
+    if what is None:
+        what = content if isinstance(content, dict) and "claim" in content else {"claim": content}
     return build_event("J", who, what=what, **kwargs)
 
 
 def delegate(
     who: str,
-    content: Any = None,
-    what: Optional[str] = None,
+    delegatee: Optional[str] = None,
+    scope: Any = None,
+    *,
+    what: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    if what is None and content is not None:
-        what = _content_to_what(content)
+    if what is None:
+        if delegatee is None or scope is None:
+            raise ValueError("delegate requires delegatee and scope")
+        what = {"delegatee": delegatee, "scope": scope}
     return build_event("D", who, what=what, **kwargs)
 
 
 def terminate(
     who: str,
-    content: Any = None,
-    what: Optional[str] = None,
+    ref: Any,
+    termination_scope: Any = "future-reliance",
+    *,
+    what: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    if what is None and content is not None:
-        what = _content_to_what(content)
-    return build_event("T", who, what=what, **kwargs)
+    if what is None:
+        what = {"termination_scope": termination_scope}
+    return build_event("T", who, what=what, ref=ref, **kwargs)
 
 
 def verify(
     who: str,
-    ref: Optional[str] = None,
-    content: Any = None,
-    what: Optional[str] = None,
+    ref: Any,
+    verification_scope: Any = "external_evidence",
+    result: Any = None,
+    *,
+    what: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    if what is None and content is not None:
-        what = _content_to_what(content)
+    if what is None:
+        what = {"verification_scope": verification_scope, "result": result}
     return build_event("V", who, what=what, ref=ref, **kwargs)
