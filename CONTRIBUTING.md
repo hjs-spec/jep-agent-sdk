@@ -26,4 +26,3 @@ make lint
 1. Ensure tests pass (`make test`)
 2. Update examples if API changes
 3. Update `CHANGELOG.md`
-```
