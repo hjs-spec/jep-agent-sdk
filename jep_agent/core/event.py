@@ -65,8 +65,7 @@ def _validate_json(value: Any) -> None:
     if value is None or isinstance(value, bool):
         return
     if isinstance(value, int):
-        if abs(value) > 2**53 - 1:
-            raise ValueError("Integer exceeds interoperable safe range")
+        _binary64_numbers(value)
     elif isinstance(value, float):
         if not math.isfinite(value):
             raise ValueError("Non-finite JSON number")
@@ -159,7 +158,7 @@ def _validate_shape(ev: Mapping[str, Any]) -> None:
         raise ValueError("verb must be J, D, T, or V")
     if not isinstance(ev["who"], str) or not ev["who"]:
         raise ValueError("who must be a non-empty string")
-    if type(ev["when"]) is not int:
+    if type(ev["when"]) is not int or abs(ev["when"]) > 2**53 - 1:
         raise ValueError("when must be an integer")
     if not isinstance(ev["what"], (dict, str)):
         raise ValueError("what must be an object or algorithm-tagged digest")
@@ -256,13 +255,35 @@ def build_event(
     return ev
 
 
+def _binary64_numbers(value):
+    """Adapt exactly representable Python integers to the JCS binary64 domain.
+
+    JSON.stringify(1e20) emits an integer token. Parsing that token into a
+    Python int must not invalidate the same JCS number or silently round a
+    genuinely higher-precision integer. This returns a copy, never edits input.
+    """
+    if type(value) is int and abs(value) > 2**53 - 1:
+        try:
+            number = float(value)
+            if not math.isfinite(number) or int(number) != value:
+                raise ValueError("Integer cannot be represented exactly as binary64")
+        except OverflowError as exc:
+            raise ValueError("Integer exceeds binary64 range") from exc
+        return number
+    if isinstance(value, dict):
+        return {key: _binary64_numbers(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_binary64_numbers(item) for item in value]
+    return value
+
+
 def canonicalize(ev: Mapping[str, Any]) -> bytes:
     """Return the JEP Signing Payload: JCS(unsigned event)."""
     if not HAS_JCS:
         raise ImportError("jcs package required for RFC 8785. Install: pip install jcs")
     unsigned = {key: deepcopy(value) for key, value in ev.items() if key != "sig"}
     _validate_json(unsigned)
-    return jcs.canonicalize(unsigned)
+    return jcs.canonicalize(_binary64_numbers(unsigned))
 
 
 def event_hash(ev: Mapping[str, Any]) -> str:
@@ -270,7 +291,7 @@ def event_hash(ev: Mapping[str, Any]) -> str:
     if not HAS_JCS:
         raise ImportError("jcs package required for RFC 8785. Install: pip install jcs")
     _validate_json(ev)
-    return "sha256:" + hashlib.sha256(jcs.canonicalize(dict(ev))).hexdigest()
+    return "sha256:" + hashlib.sha256(jcs.canonicalize(_binary64_numbers(dict(ev)))).hexdigest()
 
 
 def sign_event(ev: Dict[str, Any], private_key, *, kid: Optional[str] = None) -> Dict[str, Any]:

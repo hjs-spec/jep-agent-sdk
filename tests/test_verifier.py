@@ -54,3 +54,26 @@ def test_bad_verb():
     ev["verb"] = "X"
     result = JEPVerifier().verify_result(ev, key.public_key())
     assert result["errors"][0]["code"] == "ERR_UNKNOWN_VERB"
+
+
+def test_malformed_identities_do_not_escape_into_result():
+    key = Ed25519PrivateKey.generate()
+    verifier = JEPVerifier()
+    base = signed_event(key)
+    for event in (
+        {},
+        [],
+        {**base, "id": 3},
+        {**base, "id": ""},
+        {**base, "who": ""},
+        {**base, "who": []},
+        {k: v for k, v in base.items() if k != "id"},
+    ):
+        result = verifier.verify_result(event, key.public_key(), mode="acceptance")
+        assert result["status"] == "invalid"
+        assert result["event_identity"] is None
+        assert result["acceptance"]["effect_applied"] is False
+    assert verifier.verify_result(base, key.public_key(), mode="acceptance")["acceptance"] == {
+        "outcome": "accepted",
+        "effect_applied": True,
+    }
