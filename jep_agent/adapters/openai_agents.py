@@ -7,7 +7,7 @@ Usage:
 import sys
 
 from jep_agent.core.chain import AuditChain
-from jep_agent.primitives import judge, terminate, verify
+from jep_agent.core.event import event_identity_ref\nfrom jep_agent.primitives import judge, verify
 
 
 class _OpenAIJEPTracer:
@@ -44,8 +44,8 @@ def auto_patch():
                 "model": kwargs.get("model"),
                 "messages_count": len(kwargs.get("messages", [])),
             }
-            j_ev = judge(who=tracer.chain.issuer, content=content)
-            tracer.chain.append(j_ev)
+            j_ev = tracer.chain.append(judge(who=tracer.chain.issuer, content=content))
+            run_ref = event_identity_ref(j_ev)
 
             status = "error:interrupted"
             result_content = {"error": status}
@@ -59,12 +59,12 @@ def auto_patch():
                 result_content = {"error": str(e)}
                 raise
             finally:
-                if status == "success":
-                    v_ev = verify(who=tracer.chain.issuer, content=result_content)
-                    tracer.chain.append(v_ev)
-                else:
-                    t_ev = terminate(who=tracer.chain.issuer, content=result_content)
-                    tracer.chain.append(t_ev)
+                tracer.chain.append(verify(
+                    who=tracer.chain.issuer,
+                    ref=run_ref,
+                    verification_scope=["execution_result"],
+                    result={"status": status, **result_content},
+                ))
 
             return result
 
