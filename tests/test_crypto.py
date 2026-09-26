@@ -2,7 +2,7 @@
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep_agent.core.event import build_event, sign_event, verify_event_signature, verify_payload_integrity
+from jep_agent.core.event import (\n    build_event,\n    sign_event,\n    verify_event_signature,\n    verify_payload_integrity,\n)
 
 
 def test_sign_and_verify_detached_jws():
