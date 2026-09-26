@@ -1,14 +1,16 @@
 # Changelog
 
-## Unreleased
+## 2.1.0
 
-- Explicitly classify this package as a historical JEP-04/JAC-01 implementation.
-- Do not use its nonce, embedded-payload JWS, bare-hash chain reference, or
-  replay behavior as JEP Core 0.7 semantics.
-- New JEP Core 0.7 integrations should use the 0.7 SDK/API path.
-- Historical events remain unchanged and require explicit legacy handling.
-
-# Changelog
+- Migrate the default event model to JEP Core 0.7.
+- Add stable Event Identity `(who,id)`; remove mandatory Core nonce generation.
+- Use detached compact JWS over the JCS-canonicalized unsigned event.
+- Hash the full signed artifact for Event Hash.
+- Replace nonce replay rejection with explicit idempotent acceptance semantics in `JEPVerifier.verify_result()`.
+- Enforce Core 0.7 verb minima for D/T/V.
+- Move SDK audit-chain linkage to the `jep-agent.chain` companion extension instead of overloading Core `ref`.
+- Update LangChain/OpenAI/MCP tracing so execution failure is not misrepresented as a Termination event.
+- Preserve historical signed artifacts externally; no automatic legacy fallback or re-signing is introduced.
 
 ## 2.0.0
 
