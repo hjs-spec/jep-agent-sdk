@@ -7,9 +7,9 @@ JEP is an individual IETF Internet-Draft, not an IETF-endorsed standard. Valid s
 ## Install
 
 ```sh
-pip install jep-agent-sdk==2.1.1
+pip install jep-agent-sdk
 # Optional framework dependencies:
-pip install 'jep-agent-sdk[langchain,openai]==2.1.1'
+pip install 'jep-agent-sdk[langchain,openai]'
 ```
 
 For source development, clone this repository and use `pip install -e '.[dev]'`. Imports use `jep_agent`; the command is `jep-agent`, independent of `jep-sdk-py` and `jep-cli`.
