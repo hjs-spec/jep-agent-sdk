@@ -1,15 +1,13 @@
-> Historical repository.
+> **Historical implementation line.** This repository preserves the earlier JEP-04/JAC-01 tracing SDK and MUST NOT be used as a JEP Core 0.7 wire implementation.
 >
-
-Version 2 uses `from jep_agent import ...` and the `jep-agent` command. This removes the package/command collisions with the current `jep-sdk-py` and `jep-cli`. The historical JEP-04/JAC-01 event format is retained. See [migration](MIGRATION-2.md).
-> This repository reflects an earlier design line and is no longer the current implementation track.
+> Current JEP Core 0.7 resources:
+> - Core: https://github.com/hjs-spec/jep-core
+> - API: https://github.com/hjs-spec/jep-api
+> - Python SDK: https://github.com/hjs-spec/sdk-py
+> - JavaScript SDK: https://github.com/hjs-spec/sdk-js
+> - Go SDK: https://github.com/hjs-spec/sdk-go
 >
-> Current versions:
->
-> - JEP v0.6: https://github.com/hjs-spec/jep-v06
-> - JEP API v0.6: https://github.com/hjs-spec/jep-api
-> - HJS v0.5: https://github.com/hjs-spec/hjs-05
-> - JAC v0.5: https://github.com/hjs-spec/jac-agent-02
+> Historical events produced here remain historical artifacts; they are not silently upgraded or re-signed as Core 0.7.
 
 # JEP-Agent SDK 2.0
 
@@ -124,7 +122,7 @@ JEP (Judgment Event Protocol) is a minimal log format proposed in an individual 
 | **T** | Terminate — Close lifecycle | MUST |
 | **V** | Verify — Validate an event | MUST |
 
-Signing is optional at recording time. Unsigned events are unverified. This historical format uses its own embedded JWS payload and hash links; use `jep-v06` for the current detached JWS/JCS conformance baseline.
+Signing is optional at recording time. Unsigned events are unverified. This historical format uses its own embedded JWS payload and hash links. For current JEP Core 0.7 detached-signature/JCS behavior, use `hjs-spec/jep-core` together with the current API or language SDKs.
 
 ---
 
