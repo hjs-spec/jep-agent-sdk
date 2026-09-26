@@ -1,3 +1,5 @@
+> Historical **2.0 namespace migration**. For current Core 0.7 events and 2.1 behavior, use [MIGRATION-0.7.md](MIGRATION-0.7.md). The version references below describe the earlier migration.
+
 # Migrating to Agent SDK 2.0
 
 The distribution remains `jep-agent-sdk`. Python imports move from `jep` to `jep_agent`; the executable moves from `jep` to `jep-agent`. This is an intentional major release so the legacy SDK can coexist with `jep-sdk-py` (`from jep import JEPClient`) and `jep-cli` (`jep`). No colliding compatibility shim is installed.

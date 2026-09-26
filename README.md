@@ -4,15 +4,15 @@ Record signed statements about agent calls and inspect their evidence. The curre
 
 JEP is an individual IETF Internet-Draft, not an IETF-endorsed standard. Valid signatures do not establish factual truth, authorization, legality, successful external execution, or payment readiness.
 
-## Install the current source
+## Install
 
 ```sh
-pip install .
+pip install jep-agent-sdk==2.1.1
 # Optional framework dependencies:
-pip install '.[langchain,openai]'
+pip install 'jep-agent-sdk[langchain,openai]==2.1.1'
 ```
 
-Package index publication is separate from a merge to main. Check the installed version before assuming a registry package includes these changes. Imports use `jep_agent`; the command is `jep-agent`, independent of `jep-sdk-py` and `jep-cli`.
+For source development, clone this repository and use `pip install -e '.[dev]'`. Imports use `jep_agent`; the command is `jep-agent`, independent of `jep-sdk-py` and `jep-cli`.
 
 ## Signed trace
 
