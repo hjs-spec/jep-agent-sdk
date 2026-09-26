@@ -1,31 +1,19 @@
-"""Test cryptographic signing and tamper detection."""
+"""Test Core 0.7 detached signing and tamper detection."""
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep_agent.core.event import (
-    build_event,
-    sign_event,
-    verify_event_signature,
-    verify_payload_integrity,
-)
+from jep_agent.core.event import build_event, sign_event, verify_event_signature, verify_payload_integrity
 
 
-def generate_test_key():
-    return Ed25519PrivateKey.generate()
-
-
-def test_sign_and_verify():
-    key = generate_test_key()
-    ev = build_event("J", "agent", what="sha256:test")
-    signed = sign_event(ev, key)
-    assert signed["sig"] != ""
-    assert verify_event_signature(signed, key.public_key())
+def test_sign_and_verify_detached_jws():
+    key=Ed25519PrivateKey.generate()
+    signed=sign_event(build_event("J","agent",{"claim":"x"}),key)
+    assert signed["sig"].split(".")[1]==""
+    assert verify_event_signature(signed,key.public_key())
 
 
 def test_tamper_detection():
-    key = generate_test_key()
-    ev = build_event("J", "agent", what="sha256:test")
-    signed = sign_event(ev, key)
-
-    signed["what"] = "sha256:TAMPERED"
-    assert not verify_payload_integrity(signed)
+    key=Ed25519PrivateKey.generate()
+    signed=sign_event(build_event("J","agent",{"claim":"x"}),key)
+    signed["what"]={"claim":"tampered"}
+    assert not verify_payload_integrity(signed,key.public_key())
