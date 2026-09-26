@@ -1,3 +1,11 @@
+> **Legacy implementation notice:** this repository preserves the historical
+> JEP-04 / JAC-01 Agent SDK behavior. It is **not** a JEP Core 0.7 producer or
+> verifier. New JEP Core 0.7 integrations should use
+> [sdk-py](https://github.com/hjs-spec/sdk-py),
+> [jep-api](https://github.com/hjs-spec/jep-api), or a 0.7-native adapter.
+> Historical signed bytes MUST NOT be silently rewritten or heuristically
+> reinterpreted as 0.7.
+
 > Historical repository.
 >
 
@@ -6,7 +14,7 @@ Version 2 uses `from jep_agent import ...` and the `jep-agent` command. This rem
 >
 > Current versions:
 >
-> - JEP v0.6: https://github.com/hjs-spec/jep-v06
+> - JEP v0.6: https://github.com/hjs-spec/jep-core
 > - JEP API v0.6: https://github.com/hjs-spec/jep-api
 > - HJS v0.5: https://github.com/hjs-spec/hjs-05
 > - JAC v0.5: https://github.com/hjs-spec/jac-agent-02
