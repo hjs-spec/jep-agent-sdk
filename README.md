@@ -1,193 +1,87 @@
-> **Legacy implementation notice:** this repository preserves the historical
-> JEP-04 / JAC-01 Agent SDK behavior. It is **not** a JEP Core 0.7 producer or
-> verifier. New JEP Core 0.7 integrations should use
-> [sdk-py](https://github.com/hjs-spec/sdk-py),
-> [jep-api](https://github.com/hjs-spec/jep-api), or a 0.7-native adapter.
-> Historical signed bytes MUST NOT be silently rewritten or heuristically
-> reinterpreted as 0.7.
+# JEP-Agent SDK 2.1 — JEP Core 0.7
 
-> Historical repository.
->
+Record signed statements about agent calls and inspect their evidence. The current source implements JEP Core 0.7; historical 2.0.x releases implement the earlier JEP-04/JAC-01 format. See [migration](MIGRATION-0.7.md) before upgrading.
 
-Version 2 uses `from jep_agent import ...` and the `jep-agent` command. This removes the package/command collisions with the current `jep-sdk-py` and `jep-cli`. The historical JEP-04/JAC-01 event format is retained. See [migration](MIGRATION-2.md).
-> This repository reflects an earlier design line and is no longer the current implementation track.
->
-> Current versions:
->
-> - JEP v0.6: https://github.com/hjs-spec/jep-core
-> - JEP API v0.6: https://github.com/hjs-spec/jep-api
-> - HJS v0.5: https://github.com/hjs-spec/hjs-05
-> - JAC v0.5: https://github.com/hjs-spec/jac-agent-02
+JEP is an individual IETF Internet-Draft, not an IETF-endorsed standard. Valid signatures do not establish factual truth, authorization, legality, successful external execution, or payment readiness.
 
-# JEP-Agent SDK 2.0
+## Install the current source
 
-[![IETF Draft](https://img.shields.io/badge/IETF-JEP--04-blue)](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/)
-[![IETF Draft](https://img.shields.io/badge/IETF-JAC--01-purple)](https://datatracker.ietf.org/doc/draft-wang-jac-01/)
-[![PyPI](https://img.shields.io/badge/pip-jep--agent--sdk-blue)](https://pypi.org/project/jep-agent-sdk/)
-[![License](https://img.shields.io/badge/license-BSD--3--Clause-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-
-**Historical tracing SDK with explicit instrumentation and local verification.**
-
-JEP-Agent SDK is an experimental implementation of the [Judgment Event Protocol (JEP-04)](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/) and [JAC-01](https://datatracker.ietf.org/doc/draft-wang-jac-01/). It records instrumented calls using the historical event format. A configured signing key and independently trusted verification key are required for signature assurance.
-
----
-
-## Install
-
-```bash
-pip install jep-agent-sdk
+```sh
+pip install .
+# Optional framework dependencies:
+pip install '.[langchain,openai]'
 ```
 
-With framework adapters:
-```bash
-pip install jep-agent-sdk[langchain,openai]
-```
+Package index publication is separate from a merge to main. Check the installed version before assuming a registry package includes these changes. Imports use `jep_agent`; the command is `jep-agent`, independent of `jep-sdk-py` and `jep-cli`.
 
-> For current MCP and OpenAI Agents integrations, use `jep-mcp-wrapper` and `jep-openai-agents-middleware`. This repository retains legacy adapters.
-
----
-
-## 30-Second Quickstart
+## Signed trace
 
 ```python
-from jep_agent import trace
-from jep_agent.recorder import record
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from jep_agent import AuditChain, record
 
-trace.enable(issuer="did:example:agent-001", private_key=Ed25519PrivateKey.generate())
+key = Ed25519PrivateKey.generate()
+chain = AuditChain("agent:example", private_key=key)
 
-@record(issuer="did:example:agent-001", chain=trace.chain)
-def my_agent(query: str) -> str:
-    return f"Result for {query}"
+@record(issuer=chain.issuer, chain=chain)
+def task(value):
+    return value * 2
 
-my_agent("hello")
-trace.view()   # See the J/D/T/V event chain in your terminal
+assert task(21) == 42
+assert chain.verify_chain(key.public_key())
+chain.save("events.jsonl")
 ```
 
----
+Recording without a key is allowed for local traces, but produces unsigned, unverified records. Use a securely persisted key in a real deployment; this example generates a temporary key.
 
-## Legacy framework adapters
+## Core and companion boundaries
 
-| Framework | Integration | Your Code Changes |
-|-----------|-------------|-------------------|
-| **LangChain** | `import jep_agent.adapters.langchain.auto` | Experimental patch |
-| **OpenAI Chat Completions (legacy)** | `import jep_agent.adapters.openai_agents.auto` | Experimental patch |
-| **MCP** | `from jep_agent.adapters.mcp import JEPMCPServer` | **One line** |
+| Concern | Behavior |
+|---|---|
+| Event Identity | Stable `(who, id)` |
+| Signing payload | RFC 8785 canonical unsigned event |
+| Baseline signature | Detached JWS, `alg: Ed25519`, protected `kid` |
+| Event Hash | SHA-256 of the complete signed artifact, including `sig` |
+| Validation | Independent syntax, cryptographic, extension and requested profile checks |
+| Retry | Same identity and unsigned content returns `already_accepted` |
+| Conflict | Same identity with different unsigned content is rejected |
+| Freshness / audience | Checked only when requested |
+| Unknown critical extension | Rejected before acceptance |
+| Audit-chain linkage | `ext['jep-agent.chain']`; separate from Core `ref` |
+| Task linkage | Local `ext['jep-agent.jac']` companion; no formal JAC conformance claim |
 
----
+The in-memory `JEPVerifier` acceptance store is for a single process. It is not a durable distributed acceptance service. An independently trusted public key must be supplied; `kid` alone does not prove actor identity. Reference resolution, actor binding, domain policy and external effects remain unchecked unless provided by a separate profile or application.
 
-## Causal Web Viewer
+A function failure/cancellation produces a result statement, not a Core Termination event. Async tracing records completion only after the call finishes.
 
-```bash
+## Inspect and verify
+
+```sh
+jep-agent verify events.jsonl --public-key public-key.pem
+jep-agent export events.jsonl --output report.html
 jep-agent web --port 8080
 ```
 
-Drag-and-drop your `events.jsonl`. Get an interactive force-directed causal graph. Click any node to inspect the full JEP event. Pan, zoom, export.
+The CLI checks Core signatures and any local audit-chain links. It does not resolve arbitrary external references. The viewer and HTML export show recorded relationships and **Signed (unverified)** status; visual links do not establish causality or legal responsibility.
 
----
+Framework adapters are experimental: the OpenAI adapter targets synchronous Chat Completions, and the LangChain auto patch targets historical AgentExecutor APIs. Current Agents SDK integrations use the separate middleware repository.
 
-## Determinability Guard — Stop Agents from Guessing
+## Development
 
-```python
-from jep_agent.determinability import DeterminabilityGuard
-
-guard = DeterminabilityGuard(
-    evidence_fn=lambda ctx: len(ctx.get("tools_used", [])),
-    target_fn=lambda ctx: ctx.get("outcome"),
-    knowledge_base=[{"tools_used": ["search", "calc"], "outcome": 1},
-                    {"tools_used": ["search"], "outcome": 0}],
-    on_insufficient="raise",
-)
-
-@guard.require_determinable
-def my_agent(query: str, tools_used: list) -> str:
-    ...
+```sh
+pip install '.[dev,langchain,openai]' build
+make lint
+python -m pytest -q
+python validate.py
+python -m build --wheel
+python scripts/check_coexistence.py dist/*.whl
 ```
 
-**What it does:** If your agent hasn't gathered enough evidence to make a deterministic decision, the guard blocks execution and tells you exactly what's missing. This is an application-defined gate; it does not guarantee factual accuracy.
+CI uses fixed Core 0.7 J/D/T/V vectors and a commit-pinned independent Core validator. It also installs the built wheel beside the Python SDK and CLI in both orders and checks independent uninstalls.
 
----
+- [API](docs/API.md)
+- [Migration and historical compatibility](MIGRATION-0.7.md)
+- [Implementation limits](HARDENING.md)
+- [Canonical JEP Core repository](https://github.com/hjs-spec/jep-core)
 
-## CLI Tools
-
-```bash
-# Verify signatures, chains, and anti-replay
-jep-agent verify events.jsonl --public-key key.pem
-
-# Export a full compliance report (HTML with embedded causal graph)
-jep-agent export events.jsonl --output report.html
-```
-
----
-
-## What is JEP?
-
-JEP (Judgment Event Protocol) is a minimal log format proposed in an individual IETF Internet-Draft for AI agent decisions. It defines four immutable verbs:
-
-| Verb | Meaning | RFC 2119 |
-|------|---------|----------|
-| **J** | Judge — Initiate a decision | MUST |
-| **D** | Delegate — Transfer authority | MUST |
-| **T** | Terminate — Close lifecycle | MUST |
-| **V** | Verify — Validate an event | MUST |
-
-Signing is optional at recording time. Unsigned events are unverified. This historical format uses its own embedded JWS payload and hash links; use `jep-v06` for the current detached JWS/JCS conformance baseline.
-
----
-
-## Project Structure
-
-```
-jep_agent/
-├── core/           # JEP-04 protocol engine (event, crypto, verifier, chain)
-├── primitives.py   # J/D/T/V convenience wrappers
-├── recorder.py     # @record decorator + global trace manager
-├── determinability.py  # Causal sufficiency gate (DeterminabilityGuard)
-├── extensions/
-│   └── jac.py      # JAC-01 cross-agent accountability
-├── adapters/
-│   ├── langchain.py      # TRUE zero-code auto-patch
-│   ├── openai_agents.py  # TRUE zero-code auto-patch
-│   └── mcp.py            # MCP server wrapper
-├── cli/
-│   └── main.py     # jep-agent web | jep-agent verify | jep-agent export
-└── web/
-    └── static/
-        └── index.html   # Drag-and-drop causal topology viewer
-```
-
----
-
-## Documentation
-
-- [Architecture & Design Principles](docs/ARCHITECTURE.md)
-- [API Reference](docs/API.md)
-- [JEP-04 Internet-Draft](https://datatracker.ietf.org/doc/draft-wang-jep-judgment-event-protocol-04/)
-- [JAC-01 Internet-Draft](https://datatracker.ietf.org/doc/draft-wang-jac-01/)
-
----
-
-## Contributing
-
-```bash
-git clone https://github.com/hjs-spec/jep-agent-sdk.git
-cd jep-agent-sdk
-make install
-make test
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## Author
-
-**Yuqiang Wang**  
-HJS Foundation Ltd.  
-Email: signal@humanjudgment.org  
-GitHub: [@hjs-spec](https://github.com/hjs-spec)
-
----
-
-*JEP-Agent SDK is released under BSD-3-Clause. The protocol draft is an individual IETF Internet-Draft and does not represent IETF endorsement.*
+BSD-3-Clause. Author: Yuqiang Wang, HJS Foundation, signal@humanjudgment.org.

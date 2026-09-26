@@ -1,0 +1,13 @@
+{
+  "jep07-test-key": {
+    "kid": "jep07-test-key",
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "ebVWLo_mVPlAeLES6KmLp5AfhTrmlb7X4OORC60ElmQ",
+    "alg": "Ed25519",
+    "use": "sig",
+    "actors": [
+      "did:example:jep07-test"
+    ]
+  }
+}

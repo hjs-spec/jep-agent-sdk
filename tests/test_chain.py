@@ -3,6 +3,7 @@
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from jep_agent.core.chain import AuditChain
+from jep_agent.core.event import event_identity_ref
 from jep_agent.primitives import judge
 
 
@@ -26,7 +27,7 @@ def test_cross_chain_ref():
 
     chain2 = AuditChain(issuer="b")
     e2 = judge("b", content={"x": 2})
-    e2["ref"] = e1.get("what")
+    e2["ref"] = event_identity_ref(e1)
     chain2.append(e2)
 
-    assert e2["ref"] == e1.get("what") or e2["ref"].startswith("sha256:")
+    assert chain2.events[0]["ref"] == event_identity_ref(e1)

@@ -15,16 +15,16 @@ def calculate(expression: str) -> float:
 
 def main():
     server = JEPMCPServer("my-mcp-server", issuer="did:example:mcp-server")
-    
-    server.register(read_file)
-    server.register(calculate)
-    
-    read_file("data.txt")
-    calculate("2 + 2")
-    
+
+    recorded_read = server.register(read_file)
+    recorded_calculate = server.register(calculate)
+
+    recorded_read("data.txt")
+    recorded_calculate("2 + 2")
+
     print(f"Events: {len(server.export_chain())}")
     for ev in server.export_chain():
-        print(f"  {ev['verb']}: {ev.get('what', 'N/A')[:40]}...")
+        print(f"  {ev['verb']}: {str(ev.get('what', 'N/A'))[:40]}...")
 
 
 if __name__ == "__main__":

@@ -95,23 +95,23 @@
         function canonicalJSON(value) {
             if (value === null || typeof value !== 'object') {
                 if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Non-finite number');
+                if (typeof value === 'string' && /[\uD800-\uDFFF]/u.test(value)) throw new Error('Unpaired Unicode surrogate');
                 return JSON.stringify(value);
             }
             if (Array.isArray(value)) return '[' + value.map(canonicalJSON).join(',') + ']';
-            return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonicalJSON(value[key])).join(',') + '}';
+            return '{' + Object.keys(value).sort().map(key => canonicalJSON(key) + ':' + canonicalJSON(value[key])).join(',') + '}';
         }
 
-        async function legacyEventHash(event) {
-            const unsigned = { ...event };
-            delete unsigned.sig;
-            const bytes = new TextEncoder().encode(canonicalJSON(unsigned));
+        async function eventHash(event) {
+            const bytes = new TextEncoder().encode(canonicalJSON(event));
             const digest = await crypto.subtle.digest('SHA-256', bytes);
             return 'sha256:' + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
         }
 
         async function setEvents(imported) {
             if (!Array.isArray(imported) || imported.some(e => !e || typeof e !== 'object' || Array.isArray(e))) throw new Error('Expected event objects');
-            const hashes = await Promise.all(imported.map(legacyEventHash));
+            if (imported.some(e => e.jep !== '1' || typeof e.id !== 'string' || !e.id || typeof e.who !== 'string')) throw new Error('Expected Core 0.7 identities; use the explicit legacy tools for pre-0.7 archives');
+            const hashes = await Promise.all(imported.map(eventHash));
             events = imported;
             eventHashes = hashes;
             uploadOverlay.classList.add('hidden');
@@ -134,9 +134,7 @@
         
         function updateStats() {
             document.getElementById('statTotal').textContent = events.length;
-            const chains = new Set();
-            events.forEach(e => { if(e.ref) chains.add(e.ref); if(e.task_based_on) chains.add(e.task_based_on); });
-            document.getElementById('statChains').textContent = chains.size;
+            document.getElementById('statChains').textContent = links.length;
             document.getElementById('statSigned').textContent = events.filter(e => typeof e.sig === 'string' && e.sig !== '').length;
         }
         
@@ -156,19 +154,25 @@
             }));
             
             links = [];
-            const nodeMap = new Map(nodes.map(n => [n.id, n]));
-            
+            const artifactMap = new Map(nodes.map(n => [n.id, n]));
+            const identityKey = value => JSON.stringify([value.who, value.id]);
+            const identityMap = new Map(nodes.map(n => [identityKey(n.data), n]));
+            const resolve = ref => {
+                if (typeof ref === 'string') return artifactMap.get(ref);
+                if (!ref || ref.type !== 'jep:event' || !ref.value) return undefined;
+                const target = identityMap.get(identityKey(ref.value));
+                return target && (!ref.hash || ref.hash === target.id) ? target : undefined;
+            };
             events.forEach((e, i) => {
-                if (e.ref) {
-                    const target = nodeMap.get(e.ref);
-                    if (target) links.push({ source: nodes[i], target: target, type: 'ref' });
-                }
-                if (e.task_based_on) {
-                    const target = nodeMap.get(e.task_based_on);
-                    if (target) links.push({ source: nodes[i], target: target, type: 'task' });
+                const target = resolve(e.ref);
+                if (target) links.push({ source: nodes[i], target, type: 'ref' });
+                const chain = e.ext && e.ext['jep-agent.chain'];
+                if (chain) {
+                    const previous = resolve({ type: 'jep:event', value: chain.previous, hash: chain.artifact_hash });
+                    if (previous) links.push({ source: nodes[i], target: previous, type: 'chain' });
                 }
             });
-            
+
             for (let iter = 0; iter < 300; iter++) {
                 for (let i = 0; i < nodes.length; i++) {
                     for (let j = i+1; j < nodes.length; j++) {
@@ -248,7 +252,7 @@
         
         function showDetails(ev) {
             const c = document.getElementById('detailContent');
-            const fields = ['verb','who','when','what','nonce','ref','task_based_on','aud','sig'];
+            const fields = ['jep','id','verb','who','when','what','ref','ext','ext_crit','aud','sig'];
             c.replaceChildren();
             const addField = (name, value) => {
                 const row = document.createElement('div');

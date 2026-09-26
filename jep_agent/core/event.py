@@ -5,6 +5,8 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
+import re
 import time
 import uuid
 from copy import deepcopy
@@ -51,7 +53,77 @@ def _base64url_encode(data: bytes) -> str:
 
 
 def _base64url_decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]*", value):
+        raise ValueError("Expected unpadded base64url")
+    raw = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if _base64url_encode(raw) != value:
+        raise ValueError("Non-canonical base64url")
+    return raw
+
+
+def _validate_json(value: Any) -> None:
+    if value is None or isinstance(value, bool):
+        return
+    if isinstance(value, int):
+        if abs(value) > 2**53 - 1:
+            raise ValueError("Integer exceeds interoperable safe range")
+    elif isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("Non-finite JSON number")
+    elif isinstance(value, str):
+        value.encode("utf-8", errors="strict")
+    elif isinstance(value, list):
+        for item in value:
+            _validate_json(item)
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise ValueError("JSON member names must be strings")
+            _validate_json(key)
+            _validate_json(item)
+    else:
+        raise ValueError("Unsupported JSON value")
+
+
+def parse_json(text: str) -> Any:
+    """Parse wire JSON without silently discarding duplicate members."""
+
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError(f"Duplicate JSON member: {key}")
+            result[key] = value
+        return result
+
+    value = json.loads(text, object_pairs_hook=pairs)
+    _validate_json(value)
+    return value
+
+
+def _validate_digest(value: Any) -> None:
+    if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]*:[0-9a-f]+", value):
+        raise ValueError("Expected algorithm-tagged lowercase-hex digest")
+    if value.startswith("sha256:") and len(value) != 71:
+        raise ValueError("SHA-256 digest must contain 64 hex characters")
+
+
+def _validate_ref(value: Any) -> None:
+    if isinstance(value, str):
+        _validate_digest(value)
+        return
+    if not isinstance(value, dict) or "type" not in value or "value" not in value:
+        raise ValueError("ref requires a digest or typed reference")
+    if not isinstance(value["type"], str) or not value["type"]:
+        raise ValueError("Reference type must be non-empty")
+    if value["type"] == "jep:event":
+        identity = value["value"]
+        if not isinstance(identity, dict) or set(identity) != {"who", "id"}:
+            raise ValueError("Event reference must contain exactly who and id")
+        if not all(isinstance(identity[k], str) and identity[k] for k in ("who", "id")):
+            raise ValueError("Event reference identity must be non-empty strings")
+    if "hash" in value:
+        _validate_digest(value["hash"])
 
 
 def _compute_what(content: bytes, algorithm: str = "sha256") -> str:
@@ -68,6 +140,9 @@ def _event_identity_ref(event: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _validate_shape(ev: Mapping[str, Any]) -> None:
+    if not isinstance(ev, dict):
+        raise ValueError("Event must be an object")
+    _validate_json(ev)
     unknown = set(ev) - TOP_LEVEL_FIELDS
     if unknown:
         raise ValueError(f"Unknown Core field(s): {', '.join(sorted(unknown))}")
@@ -80,7 +155,7 @@ def _validate_shape(ev: Mapping[str, Any]) -> None:
         raise ValueError("jep must be '1'")
     if not isinstance(ev["id"], str) or not ev["id"] or not ev["id"].isascii():
         raise ValueError("id must be a non-empty ASCII string")
-    if ev["verb"] not in VERBS:
+    if not isinstance(ev["verb"], str) or ev["verb"] not in VERBS:
         raise ValueError("verb must be J, D, T, or V")
     if not isinstance(ev["who"], str) or not ev["who"]:
         raise ValueError("who must be a non-empty string")
@@ -88,35 +163,42 @@ def _validate_shape(ev: Mapping[str, Any]) -> None:
         raise ValueError("when must be an integer")
     if not isinstance(ev["what"], (dict, str)):
         raise ValueError("what must be an object or algorithm-tagged digest")
+    if isinstance(ev["what"], str):
+        _validate_digest(ev["what"])
+    elif not ev["what"]:
+        raise ValueError("what object must not be empty")
+    if not isinstance(ev["sig"], str):
+        raise ValueError("Baseline sig must be a string")
+    if "ref" in ev:
+        _validate_ref(ev["ref"])
 
-    if ev.get("aud") is not None:
+    if "aud" in ev:
         if not isinstance(ev["aud"], str) or not ev["aud"]:
             raise ValueError("aud must be a non-empty string")
 
-    if ev.get("ext") is not None and not isinstance(ev["ext"], dict):
-        raise ValueError("ext must be an object")
+    if "ext" in ev:
+        if not isinstance(ev["ext"], dict):
+            raise ValueError("ext must be an object")
+        if not all(k and isinstance(v, dict) for k, v in ev["ext"].items()):
+            raise ValueError("Extensions require non-empty identifiers and object bodies")
 
-    if ev.get("ext_crit") is not None:
+    if "ext_crit" in ev:
         crit = ev["ext_crit"]
         valid = (
             isinstance(crit, list)
-            and len(crit) == len(set(crit))
             and all(isinstance(item, str) and item for item in crit)
+            and len(crit) == len(set(crit))
         )
         if not valid:
             raise ValueError("ext_crit must be a unique array of non-empty strings")
 
     what = ev["what"]
     if ev["verb"] == "D":
-        valid_delegatee = isinstance(what, dict) and isinstance(
-            what.get("delegatee"), str
-        )
+        valid_delegatee = isinstance(what, dict) and isinstance(what.get("delegatee"), str)
         if not valid_delegatee or not what.get("delegatee") or "scope" not in what:
             raise ValueError("D requires object-valued what with delegatee and scope")
     elif ev["verb"] == "T":
-        valid_scope = isinstance(what, dict) and isinstance(
-            what.get("termination_scope"), str
-        )
+        valid_scope = isinstance(what, dict) and isinstance(what.get("termination_scope"), str)
         if "ref" not in ev or not valid_scope or not what.get("termination_scope"):
             raise ValueError("T requires ref and what.termination_scope")
     elif ev["verb"] == "V":
@@ -126,9 +208,15 @@ def _validate_shape(ev: Mapping[str, Any]) -> None:
             or "verification_scope" not in what
             or "result" not in what
         ):
-            raise ValueError(
-                "V requires ref, what.verification_scope, and what.result"
-            )
+            raise ValueError("V requires ref, what.verification_scope, and what.result")
+        scopes = what["verification_scope"]
+        if not (
+            isinstance(scopes, list)
+            and scopes
+            and all(isinstance(item, str) and item for item in scopes)
+            and len(scopes) == len(set(scopes))
+        ):
+            raise ValueError("verification_scope must be a non-empty unique string array")
 
 
 def build_event(
@@ -149,7 +237,7 @@ def build_event(
     """
     ev: Dict[str, Any] = {
         "jep": WIRE_VERSION,
-        "id": event_id or f"urn:uuid:{uuid.uuid4()}",
+        "id": f"urn:uuid:{uuid.uuid4()}" if event_id is None else event_id,
         "verb": verb,
         "who": who,
         "when": int(time.time()) if when is None else when,
@@ -160,10 +248,10 @@ def build_event(
         ev["aud"] = aud
     if ref is not None:
         ev["ref"] = deepcopy(ref)
-    if ext:
+    if ext is not None:
         ev["ext"] = deepcopy(ext)
-    if ext_crit:
-        ev["ext_crit"] = list(ext_crit)
+    if ext_crit is not None:
+        ev["ext_crit"] = deepcopy(ext_crit)
     _validate_shape(ev)
     return ev
 
@@ -173,6 +261,7 @@ def canonicalize(ev: Mapping[str, Any]) -> bytes:
     if not HAS_JCS:
         raise ImportError("jcs package required for RFC 8785. Install: pip install jcs")
     unsigned = {key: deepcopy(value) for key, value in ev.items() if key != "sig"}
+    _validate_json(unsigned)
     return jcs.canonicalize(unsigned)
 
 
@@ -180,16 +269,20 @@ def event_hash(ev: Mapping[str, Any]) -> str:
     """Hash the exact full signed artifact, including sig."""
     if not HAS_JCS:
         raise ImportError("jcs package required for RFC 8785. Install: pip install jcs")
+    _validate_json(ev)
     return "sha256:" + hashlib.sha256(jcs.canonicalize(dict(ev))).hexdigest()
 
 
-def sign_event(ev: Dict[str, Any], private_key) -> Dict[str, Any]:
+def sign_event(ev: Dict[str, Any], private_key, *, kid: Optional[str] = None) -> Dict[str, Any]:
     """Apply the baseline detached compact JWS signature."""
     if not HAS_CRYPTO or not isinstance(private_key, Ed25519PrivateKey):
         raise ValueError("Ed25519 private key required")
 
     _validate_shape(ev)
-    header = json.dumps({"alg": "EdDSA"}, separators=(",", ":")).encode("utf-8")
+    kid = f"{ev['who']}#key-1" if kid is None else kid
+    if not isinstance(kid, str) or not kid:
+        raise ValueError("kid must be a non-empty key identifier")
+    header = json.dumps({"alg": "Ed25519", "kid": kid}, separators=(",", ":")).encode("utf-8")
     protected = _base64url_encode(header)
     payload = canonicalize(ev)
     signing_input = (protected + "." + _base64url_encode(payload)).encode("ascii")
@@ -200,10 +293,14 @@ def sign_event(ev: Dict[str, Any], private_key) -> Dict[str, Any]:
     return signed
 
 
-def verify_event_signature(ev: Mapping[str, Any], public_key) -> bool:
+def verify_event_signature(
+    ev: Mapping[str, Any], public_key, *, signature_profile: str = "baseline-0.7"
+) -> bool:
     if not HAS_CRYPTO or not isinstance(public_key, Ed25519PublicKey):
         return False
 
+    if not isinstance(ev, dict):
+        return False
     sig = ev.get("sig")
     if not isinstance(sig, str):
         return False
@@ -213,13 +310,19 @@ def verify_event_signature(ev: Mapping[str, Any], public_key) -> bool:
         return False
 
     try:
-        header = json.loads(_base64url_decode(parts[0]))
+        header = parse_json(_base64url_decode(parts[0]))
+        algorithm = {"baseline-0.7": "Ed25519", "legacy-eddsa": "EdDSA"}.get(signature_profile)
         valid_header = (
             isinstance(header, dict)
-            and header.get("alg") == "EdDSA"
+            and algorithm is not None
+            and header.get("alg") == algorithm
             and "crit" not in header
             and header.get("b64", True) is True
         )
+        if signature_profile == "baseline-0.7":
+            valid_header = (
+                valid_header and isinstance(header.get("kid"), str) and bool(header["kid"])
+            )
         if not valid_header:
             return False
 
@@ -240,11 +343,7 @@ def verify_payload_integrity(ev: Mapping[str, Any], public_key=None) -> bool:
 
     if public_key is None:
         sig = ev.get("sig")
-        return (
-            isinstance(sig, str)
-            and sig.count(".") == 2
-            and sig.split(".")[1] == ""
-        )
+        return isinstance(sig, str) and sig.count(".") == 2 and sig.split(".")[1] == ""
     return verify_event_signature(ev, public_key)
 
 

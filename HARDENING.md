@@ -1,34 +1,21 @@
-# Implementation hardening — September 2026
+# Core 0.7 implementation checks and limits
 
-Do not report unverified or unfinished agent executions as valid.
+The current path rejects malformed JSON values, duplicate members at file ingress, unsupported top-level fields, malformed references, non-canonical base64url, duplicate JOSE headers, unsupported critical headers and critical event extensions. Missing keys are indeterminate. Invalid events do not consume acceptance state.
 
-## Changes
+Events are signed with the detached Ed25519/JCS baseline. Event Hash includes the signature. In-memory acceptance compares unsigned content by `(who,id)`, so a valid new signature does not create a second acceptance effect. A lock serializes concurrent calls inside one process; this does not provide durable or multi-host acceptance.
 
-Signature verification binds the embedded signed payload to the current event. Chains verify every event, including the first, with a trusted public key. Exported events are copied. Missing keys return UNVERIFIED and unsigned chains do not pass integrity verification. Nonces are consumed after signature and policy checks. Async wrappers await completion and record errors/cancellation as termination. LangChain callback IDs no longer refer to a nonexistent field. The UI renders event fields as text. validate.py now exercises the actual signed API.
+Archive chain checks verify every signature, the predecessor identity and full-artifact pin. HTML export escapes visible text and embedded JSON; browser graphs display exact artifact hashes and typed event references separately. Viewers do not perform cryptographic validation.
 
-## Validation
+Core does not enforce actor binding, external reference availability, causality, policy, legal consequences, or truth. A function execution error is not automatically a Termination statement. The `jep-agent.jac` and `jep-agent.chain` extensions are local companion behavior.
+
+Historical releases and archives remain separate; see [migration](MIGRATION-0.7.md). The legacy OpenAI/LangChain monkey patches are experimental. Prefer explicit `@record` instrumentation when adapter compatibility is uncertain.
 
 ```sh
+python -m compileall -q jep_agent tests
+ruff check jep_agent tests
+black --check jep_agent tests
 python -m pytest -q
 python validate.py
-ruff check jep_agent/ tests/
-black --check jep_agent/ tests/
+python -m build --wheel
+python scripts/check_coexistence.py dist/*.whl
 ```
-
-## Compatibility and remaining limits
-
-Legacy-04 embedded EdDSA signatures and legacy unsigned-event link hashes remain unchanged. This SDK is not the v0.6 wire SDK. verify_chain(public_key=...) is required for imported signed archives; unsigned traces remain available for recording. Version 2 uses `jep_agent` and `jep-agent` to avoid the current SDK/CLI namespaces. See MIGRATION-2.md for upgrading shared 1.x installations. OpenAI monkey patching remains a legacy Completions integration; use the dedicated middleware for current Agents SDK integration.
-
-## Follow-up hardening
-
-`jep-agent verify` exits nonzero for invalid/unverified, empty, or malformed
-archives. References must resolve to earlier verified events in the input;
-include the referenced ancestors when checking an archive segment. This command
-retains the legacy verifier's freshness policy.
-
-HTML exports escape all event text and protect embedded JSON from script-element
-termination. Export and browser graph nodes use the SDK's unsigned-event JCS
-hashes, so ordinary legacy references resolve. The viewer labels signature
-presence as **Signed (unverified)** and does not claim cryptographic validation.
-
-The legacy synchronous Chat Completions patch is idempotent and retains events in the public trace manager instead of discarding each call chain. Quickstart now uses explicit @record instrumentation and a signing key. Documentation distinguishes this historical adapter from the current Agents SDK middleware and removes unsupported production/standardization claims.

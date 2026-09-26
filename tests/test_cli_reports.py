@@ -31,21 +31,21 @@ def signed_chain(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "case", ["valid", "tamper", "broken-ref", "unsigned", "no-key", "empty", "missing-nonce"]
+    "case", ["valid", "tamper", "broken-chain", "unsigned", "no-key", "empty", "missing-id"]
 )
 def test_cli_exit_code_and_reference_validation(case, signed_chain, tmp_path):
     key, pem, events = signed_chain
     if case == "tamper":
         events[0]["what"] = "sha256:" + "c" * 64
-    elif case == "broken-ref":
-        events[1]["ref"] = "sha256:" + "f" * 64
-        sign_event(events[1], key)
+    elif case == "broken-chain":
+        events[1]["ext"]["jep-agent.chain"]["artifact_hash"] = "sha256:" + "f" * 64
+        events[1] = sign_event(events[1], key)
     elif case == "unsigned":
         events[0]["sig"] = ""
     elif case == "empty":
         events = []
-    elif case == "missing-nonce":
-        del events[0]["nonce"]
+    elif case == "missing-id":
+        del events[0]["id"]
     archive = tmp_path / "events.jsonl"
     archive.write_text("".join(json.dumps(event) + "\n" for event in events))
     args = ["verify", str(archive)]
@@ -53,11 +53,11 @@ def test_cli_exit_code_and_reference_validation(case, signed_chain, tmp_path):
         args += ["--public-key", str(pem)]
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == (0 if case == "valid" else 1), result.output
-    if case == "broken-ref":
-        assert "reference not found" in result.output
+    if case == "broken-chain":
+        assert "Companion audit-chain verification failed" in result.output
     if case == "tamper":
         assert "signature verification failed" in result.output
-    if case == "missing-nonce":
+    if case == "missing-id":
         assert "missing required field" in result.output
 
 
@@ -82,7 +82,7 @@ class Tags(HTMLParser):
 @pytest.mark.parametrize("field", ["who", "what", "ref", "when", "verb", "title"])
 def test_report_keeps_untrusted_markup_in_text(field):
     payload = '</script><script>window.injected=1</script><img src=x onerror="alert(1)">'
-    event = build_event("J", "agent")
+    event = build_event("J", "agent", {"claim": "x"})
     title = "Audit"
     if field == "title":
         title = payload
@@ -95,16 +95,19 @@ def test_report_keeps_untrusted_markup_in_text(field):
     assert all(tag != "img" for tag, _ in parser.tags)
     assert all(not any(name.startswith("on") for name in attrs) for _, attrs in parser.tags)
     assert "&lt;" in html
-    data = json.loads(re.search(r"const nodes = (.*);", html).group(1))
+    data = json.loads(re.search(r"const graph = (.*);", html).group(1))["nodes"]
     if field == "who":
         assert data[0]["who"] == payload
 
 
-def test_export_links_use_legacy_unsigned_event_hash(signed_chain):
+def test_export_links_separate_identity_from_full_artifact_hash(signed_chain):
     _, _, events = signed_chain
     html = _generate_full_report(events, "Audit")
-    nodes = json.loads(re.search(r"const nodes = (.*);", html).group(1))
-    assert nodes[0]["id"] == event_hash(events[0]) == nodes[1]["ref"]
+    nodes = json.loads(re.search(r"const graph = (.*);", html).group(1))["nodes"]
+    assert nodes[0]["event_hash"] == event_hash(events[0])
+    assert nodes[0]["id"] == json.dumps([events[0]["who"], events[0]["id"]], separators=(",", ":"))
+    graph = json.loads(re.search(r"const graph = (.*);", html).group(1))
+    assert graph["links"] == [{"source": 0, "target": 1, "type": "chain"}]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js required for viewer runtime test")
@@ -113,14 +116,19 @@ def test_browser_hashes_match_sdk_and_render_real_links(signed_chain):
     chain = AuditChain("测试😀", private_key=key)
     chain.append(
         build_event(
-            "J", "agent", extensions={"edge": {"𐀀": 1, "\ufffd": 2, "html": "<>&", "float": 1e-7}}
+            "J",
+            "agent",
+            {"claim": "x"},
+            ext={"edge": {"𐀀": 1, "\ufffd": 2, "html": "<>&", "float": 1e-7}},
         )
     )
-    chain.append(build_event("V", "agent"))
+    chain.append(build_event("J", "agent", {"claim": "y"}))
     events = chain.export()
+    # A changed signature changes the full artifact hash, even though identity is stable.
+    original_hash = event_hash(events[1])
+    events[1]["sig"] = "not-a-signature"
     expected = [event_hash(event) for event in events]
-    # Signature presence must never be described as verified by the viewer.
-    events[0]["sig"] = "not-a-signature"
+    assert expected[1] != original_hash
     viewer = Path(__file__).resolve().parents[1] / "jep_agent/web/static/index.html"
     html = viewer.read_text()
     assert "Signed (unverified)" in html

@@ -1,0 +1,14 @@
+{
+  "jep": "1",
+  "who": "did:example:jep07-test",
+  "when": 1790424000,
+  "id": "urn:uuid:00000000-0000-7000-8000-000000000002",
+  "verb": "D",
+  "what": {
+    "delegatee": "did:example:delegatee",
+    "scope": {
+      "task": "review"
+    }
+  },
+  "sig": "eyJhbGciOiJFZDI1NTE5Iiwia2lkIjoiamVwMDctdGVzdC1rZXkifQ..yY4TMopaCBsW0lOKN9LhVzIKa5Et3Og-n6lGOQ20Nmbubs6uJ4EUjrXCQuseQ1gLu-XNdO_0zSC5ji3KitUQBA"
+}

@@ -1,4 +1,5 @@
 """JEP Core 0.7 J/D/T/V primitive constructors."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, Iterable, Optional
@@ -26,11 +27,11 @@ def delegate(
     what: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    body=dict(what or {})
-    body["delegatee"]=delegatee
-    body["scope"]=scope
+    body = dict(what or {})
+    body["delegatee"] = delegatee
+    body["scope"] = scope
     if constraints is not None:
-        body["constraints"]=list(constraints)
+        body["constraints"] = list(constraints)
     return build_event("D", who, body, **kwargs)
 
 
@@ -43,10 +44,10 @@ def terminate(
     what: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    body=dict(what or {})
-    body["termination_scope"]=termination_scope
+    body = dict(what or {})
+    body["termination_scope"] = termination_scope
     if reason is not None:
-        body["reason"]=reason
+        body["reason"] = reason
     return build_event("T", who, body, ref=ref, **kwargs)
 
 
@@ -59,7 +60,7 @@ def verify(
     what: Optional[Dict[str, Any]] = None,
     **kwargs,
 ) -> Dict[str, Any]:
-    body=dict(what or {})
-    body["verification_scope"]=verification_scope
-    body["result"]=result
+    body = dict(what or {})
+    body["verification_scope"] = verification_scope
+    body["result"] = result
     return build_event("V", who, body, ref=ref, **kwargs)

@@ -1,0 +1,18 @@
+{
+  "jep": "1",
+  "who": "did:example:jep07-test",
+  "when": 1790424000,
+  "id": "urn:uuid:00000000-0000-7000-8000-000000000003",
+  "verb": "T",
+  "ref": {
+    "type": "jep:event",
+    "value": {
+      "who": "did:example:jep07-test",
+      "id": "urn:uuid:00000000-0000-7000-8000-000000000002"
+    }
+  },
+  "what": {
+    "termination_scope": "future-reliance"
+  },
+  "sig": "eyJhbGciOiJFZDI1NTE5Iiwia2lkIjoiamVwMDctdGVzdC1rZXkifQ..aBR01S1pa7nhg8zBwambNZIbIOsqzQMyRd1gQFR4WdK_aHz8HFy6KVgUcaYIYdVwLZDoTdyA1Q_Jp6Ujm5KhAg"
+}

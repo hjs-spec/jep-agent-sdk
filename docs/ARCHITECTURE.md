@@ -1,3 +1,5 @@
+> Historical 2.0.x architecture. For the current Core 0.7 behavior, see [README](../README.md) and [migration](../MIGRATION-0.7.md).
+
 # JEP-Agent SDK Architecture
 
 ## Layers

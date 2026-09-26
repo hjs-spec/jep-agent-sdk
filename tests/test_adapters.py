@@ -17,7 +17,7 @@ def test_mcp_server():
     assert len(server.export_chain()) == 2  # J + V
 
 
-def test_mcp_error_termination():
+def test_mcp_error_is_result_statement():
     server = JEPMCPServer("test-server")
 
     @server.register
@@ -28,4 +28,5 @@ def test_mcp_error_termination():
         fail()
 
     events = server.export_chain()
-    assert events[-1]["verb"] == "T"
+    assert events[-1]["verb"] == "J"
+    assert events[-1]["what"]["status"] == "error"

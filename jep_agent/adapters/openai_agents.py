@@ -84,9 +84,7 @@ def auto_patch():
 def wrap_agent(agent_instance, issuer: str = "openai:agent", private_key=None):
     """Wrap a specific legacy agent instance."""
     tracer = _OpenAIJEPTracer(issuer=issuer, private_key=private_key)
-    original = getattr(agent_instance, "run", None) or getattr(
-        agent_instance, "invoke", None
-    )
+    original = getattr(agent_instance, "run", None) or getattr(agent_instance, "invoke", None)
     if not original:
         raise ValueError("Agent must have run() or invoke()")
 

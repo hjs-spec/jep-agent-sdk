@@ -7,7 +7,7 @@ import time
 from threading import Lock
 from typing import Any, Dict, Mapping, Optional
 
-from jep_agent.core.event import canonicalize, event_hash, verify_event_signature
+from jep_agent.core.event import _validate_shape, canonicalize, event_hash, verify_event_signature
 
 CHECKS = (
     "syntax",
@@ -74,8 +74,8 @@ class JEPVerifier:
                 "mode": mode,
                 "profile": "jep-core-0.7",
                 "event_identity": {
-                    "who": ev.get("who"),
-                    "id": ev.get("id"),
+                    "who": ev.get("who") if isinstance(ev, dict) else None,
+                    "id": ev.get("id") if isinstance(ev, dict) else None,
                 },
                 "event_hash": None,
                 "checks": checks,
@@ -93,70 +93,21 @@ class JEPVerifier:
                 "policy",
             )
 
+        if not isinstance(ev, dict):
+            return fail("ERR_INVALID_FIELD_TYPE", "event must be an object", "syntax")
         for field in ("jep", "id", "verb", "who", "when", "what", "sig"):
             if field not in ev:
                 return fail(
-                    "ERR_MISSING_REQUIRED_FIELD",
-                    f"missing required field: {field}",
-                    "syntax",
+                    "ERR_MISSING_REQUIRED_FIELD", f"missing required field: {field}", "syntax"
                 )
-
         if ev.get("jep") != "1":
             return fail("ERR_UNSUPPORTED_JEP_VERSION", "jep must be '1'", "syntax")
-        if ev.get("verb") not in {"J", "D", "T", "V"}:
+        if not isinstance(ev.get("verb"), str) or ev["verb"] not in {"J", "D", "T", "V"}:
             return fail("ERR_UNKNOWN_VERB", "verb must be J, D, T, or V", "syntax")
-        if (
-            not isinstance(ev.get("id"), str)
-            or not ev["id"]
-            or not ev["id"].isascii()
-        ):
-            return fail(
-                "ERR_EVENT_ID_INVALID",
-                "id must be non-empty ASCII",
-                "syntax",
-            )
-        if (
-            not isinstance(ev.get("who"), str)
-            or not ev["who"]
-            or type(ev.get("when")) is not int
-        ):
-            return fail("ERR_INVALID_FIELD_TYPE", "invalid who/when", "syntax")
-
-        what = ev.get("what")
-        if ev["verb"] == "D":
-            if (
-                not isinstance(what, dict)
-                or not what.get("delegatee")
-                or "scope" not in what
-            ):
-                return fail(
-                    "ERR_MISSING_REQUIRED_FIELD",
-                    "D requires what.delegatee and what.scope",
-                    "syntax",
-                )
-        elif ev["verb"] == "T":
-            if (
-                "ref" not in ev
-                or not isinstance(what, dict)
-                or not what.get("termination_scope")
-            ):
-                return fail(
-                    "ERR_MISSING_REQUIRED_FIELD",
-                    "T requires ref and what.termination_scope",
-                    "syntax",
-                )
-        elif ev["verb"] == "V":
-            if (
-                "ref" not in ev
-                or not isinstance(what, dict)
-                or "verification_scope" not in what
-                or "result" not in what
-            ):
-                return fail(
-                    "ERR_MISSING_REQUIRED_FIELD",
-                    "V requires ref, what.verification_scope, and what.result",
-                    "syntax",
-                )
+        try:
+            _validate_shape(ev)
+        except (TypeError, ValueError) as exc:
+            return fail("ERR_INVALID_FIELD_TYPE", str(exc), "syntax")
         checks["syntax"] = "pass"
 
         if public_key is None:
@@ -193,9 +144,13 @@ class JEPVerifier:
 
         checks["cryptographic"] = "pass"
         checks["event_identity"] = "pass"
-        checks["extension_processing"] = (
-            "pass" if not ev.get("ext_crit") else "unsupported"
-        )
+        if ev.get("ext_crit"):
+            return fail(
+                "ERR_UNKNOWN_CRITICAL_EXTENSION",
+                "this verifier implements no critical extension handlers",
+                "extension_processing",
+            )
+        checks["extension_processing"] = "pass"
         if "ref" not in ev:
             checks["reference_integrity"] = "not_applicable"
 
