@@ -9,7 +9,10 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from jep_agent.core.event import parse_json
+
 console = Console()
+
 CHAIN_EXTENSION = "jep-agent.chain"
 
 
@@ -20,7 +23,7 @@ def _read_events(file):
             if not line.strip():
                 continue
             try:
-                event = json.loads(line)
+                event = parse_json(line)
             except ValueError as exc:
                 raise click.ClickException(f"Invalid JSON on line {number}") from exc
             if not isinstance(event, dict):
@@ -30,7 +33,9 @@ def _read_events(file):
 
 
 def _identity_key(event):
-    return f"{event.get('who', '?')}|{event.get('id', '?')}"
+    return json.dumps(
+        [event.get("who"), event.get("id")], ensure_ascii=False, separators=(",", ":")
+    )
 
 
 def _ref_key(ref):
@@ -41,7 +46,7 @@ def _ref_key(ref):
     ):
         value = ref["value"]
         if isinstance(value.get("who"), str) and isinstance(value.get("id"), str):
-            return f"{value['who']}|{value['id']}"
+            return _identity_key(value)
     return None
 
 
@@ -110,11 +115,14 @@ def verify(file, public_key, aud):
         )
         if status != "valid":
             invalid += 1
+            for error in result["errors"]:
+                console.print(f"{error['code']}: {error['message']}", markup=False)
 
     chain_links = sum(
         1
         for event in events
-        if isinstance((event.get("ext") or {}).get(CHAIN_EXTENSION), dict)
+        if isinstance(event.get("ext"), dict)
+        and isinstance(event["ext"].get(CHAIN_EXTENSION), dict)
     )
     if chain_links:
         chain = AuditChain(issuer=str(events[0].get("who", "agent")))
@@ -124,9 +132,7 @@ def verify(file, public_key, aud):
             console.print("[red]Companion audit-chain verification failed[/red]")
 
     console.print(table)
-    console.print(
-        f"[bold]Events: {len(events)} | Invalid/indeterminate: {invalid}[/bold]"
-    )
+    console.print(f"[bold]Events: {len(events)} | Invalid/indeterminate: {invalid}[/bold]")
     if invalid:
         raise click.exceptions.Exit(1)
 
@@ -180,7 +186,7 @@ def _generate_full_report(events, title):
         chain = (event.get("ext") or {}).get(CHAIN_EXTENSION)
         if isinstance(chain, dict) and isinstance(chain.get("previous"), dict):
             previous = chain["previous"]
-            prev_key = f"{previous.get('who', '')}|{previous.get('id', '')}"
+            prev_key = _identity_key(previous)
             if prev_key in identities:
                 links.append(
                     {
@@ -199,6 +205,7 @@ def _generate_full_report(events, title):
             f"<td>{escape(str(event.get('id', '')))}</td>"
             f"<td>{escape(str(event.get('when', '')))}</td>"
             f"<td>{escape(str(event.get('what', ''))[:80])}</td>"
+            f"<td>{escape(str(event.get('ref', '')))}</td>"
             f"<td>{'yes' if event.get('sig') else 'no'}</td>"
             "</tr>"
         )
@@ -207,7 +214,7 @@ def _generate_full_report(events, title):
         {"nodes": nodes, "links": links},
         ensure_ascii=False,
     )
-    data = data.replace("<", "\u003c").replace(">", "\u003e").replace("&", "\u0026")
+    data = data.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     style = (
         "body{font-family:system-ui;margin:32px;max-width:1200px}"
         "table{width:100%;border-collapse:collapse}"
@@ -222,13 +229,13 @@ def _generate_full_report(events, title):
     )
     columns = (
         "<tr><th>Verb</th><th>Who</th><th>Event ID</th>"
-        "<th>When</th><th>What</th><th>Signed</th></tr>"
+        "<th>When</th><th>What</th><th>Ref</th><th>Signed</th></tr>"
     )
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         f"<title>{escape(title_text)}</title><style>{style}</style></head>"
         f"<body><h1>{escape(title_text)}</h1><p>{header}</p>"
-        f"<p>Events: {len(events)} · Signed: {signed} · "
+        f"<p>Events: {len(events)} · Signed (unverified): {signed} · "
         f"Companion links: {len(links)}</p>"
         f"<table>{columns}{''.join(rows)}</table>"
         f"<script>const graph = {data};</script></body></html>"

@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
@@ -30,6 +31,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov pytest-asyncio ruff black
         pip install -e ".[langchain,openai]"
+
+    - name: Install pinned independent Core validator
+      run: pip install "jep-core-conformance @ git+https://github.com/hjs-spec/jep-core.git@de3b49d8d169ed505b114122b322dcf5f096394d"
+
+    - name: Check package syntax
+      run: python -m compileall -q jep_agent tests
 
     - name: Lint
       run: |

@@ -1,47 +1,13 @@
-# API Reference
+# Core 0.7 API
 
-## Core Functions
+- `build_event(verb, who, what, *, event_id=None, aud=None, ref=None, ext=None, ext_crit=None, when=None)` creates an unsigned event. J requires a claim; D requires `delegatee` and `scope`; T requires a reference and `termination_scope`; V requires a reference, `verification_scope` and `result`.
+- `sign_event(event, private_key, *, kid=None)` returns a signed copy. The protected header uses Ed25519 and a key identifier.
+- `canonicalize(event)` returns unsigned JCS bytes. `event_hash(event)` hashes the complete signed artifact.
+- `event_identity_ref(event)` in `jep_agent.core.event` builds a typed `(who,id)` reference.
+- `verify_event_signature(event, public_key)` checks the selected signature baseline. It does not establish actor identity or validate all Core semantics.
+- `JEPVerifier.verify_result(event, public_key, *, mode='archival', expected_aud=None, max_age_seconds=None)` checks Core structure, cryptography, critical extensions and requested profile checks. Acceptance mode uses a process-local identity store. `verify(...)` is an archival compatibility wrapper returning VALID / INVALID / UNVERIFIED.
+- `AuditChain(issuer, private_key=None, storage_path=None)` appends local companion links. `verify_chain(public_key)` checks every signature and link. `export()` returns copies.
+- `@record(issuer=..., private_key=..., chain=...)` records synchronous or asynchronous invocation and completion. Cancellation and errors do not imply termination of authority.
+- `build_jac_event(...)` stores local task links in `ext['jep-agent.jac']`; `verify_jac_core(...)` requires external verification/lookup callbacks. Neither claims formal JAC conformance.
 
-### `build_event(verb, who, **kwargs)`
-Build a JEP-04 compliant event dict.
-
-### `sign_event(event, private_key)`
-Sign event with Ed25519 JWS (RFC 7515).
-
-### `verify_event_signature(event, public_key)` / `verify_payload_integrity(event)`
-Cryptographic verification.
-
-### `JEPVerifier.verify(event, **kwargs)`
-Full verification pipeline (signature, replay, timestamp, chain).
-
-## Decorators
-
-### `@record(issuer=..., private_key=...)`
-Auto-instrument any function with JEP events.
-
-## Adapters
-
-### `import jep_agent.adapters.langchain.auto`
-Global monkey-patch. All LangChain AgentExecutor runs auto-record.
-
-### `import jep_agent.adapters.openai_agents.auto`
-Global monkey-patch. All OpenAI chat completions auto-record.
-
-### `JEPMCPServer(name)` — MCP
-Server wrapper that auto-records all registered tools.
-
-## Determinability
-
-### `DeterminabilityGuard(evidence_fn, target_fn, knowledge_base, on_insufficient="raise")`
-Runtime gate. Decorated functions are blocked if evidence is insufficient.
-
-## CLI
-
-### `jep-agent web [--port 8080]`
-Launch causal topology viewer.
-
-### `jep-agent verify &lt;file.jsonl&gt; [--public-key key.pem]`
-Verify event signatures and chain integrity.
-
-### `jep-agent export &lt;file.jsonl&gt; --output report.html`
-Export full audit report with embedded causal graph.
+CLI: `jep-agent verify`, `jep-agent export`, and `jep-agent web`. Graphs are views of recorded relationships, not proof of causal or legal conclusions. See [migration](../MIGRATION-0.7.md) for historical archives and signature profiles.

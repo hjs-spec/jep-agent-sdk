@@ -73,7 +73,7 @@ for i, owned in enumerate(files):
             run([bin_dir / "jep", "--help"], root)
             if removed != "jep-agent-sdk":
                 run([bin_dir / "jep-agent", "--help"], root)
-    print("Both install orders and independent uninstalls passed; legacy signatures verified.")
+    print("Both install orders and independent uninstalls passed; Core 0.7 signatures verified.")
 
 
 if __name__ == "__main__":

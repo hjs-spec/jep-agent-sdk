@@ -1,3 +1,5 @@
-# Release 2.0.0
+# Core 0.7 source repair (2.1 line)
 
-Fix the Python namespace and CLI command collisions with the current JEP clients. Import the legacy SDK as `jep_agent` and run `jep-agent`; see MIGRATION-2.md for existing shared installations. Historical JEP-04/JAC-01 signed events remain unchanged. Internal imports, adapters, examples, Docker and CI use the new namespace.
+Fix package import failures and complete the current Core 0.7 path: baseline signing, strict input handling, critical-extension rejection, exact-artifact hashes, typed references, companion chain/task separation, safe HTML export, examples and documentation.
+
+CI verifies pinned Core J/D/T/V vectors, an independent validator, packaging coexistence and Python 3.10–3.13. Package-index publication is a separate action; merging this repair does not change an existing release or publish a new version. Historical 2.0.x archives require the corresponding legacy verifier.

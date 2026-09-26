@@ -1,0 +1,12 @@
+{
+  "jep": "1",
+  "who": "did:example:jep07-test",
+  "when": 1790424000,
+  "id": "urn:uuid:00000000-0000-7000-8000-000000000001",
+  "verb": "J",
+  "what": {
+    "claim": "approve-result",
+    "subject": "urn:example:result:1"
+  },
+  "sig": "eyJhbGciOiJFZDI1NTE5Iiwia2lkIjoiamVwMDctdGVzdC1rZXkifQ..9CRgLTWnaXKsDn2iieet3t3FDJwHw0yHyXnoIQgPE22d73Y1j1ZRvf-z3__Ej7cgB5aCV-a68xM4TXNVJwuNAg"
+}
