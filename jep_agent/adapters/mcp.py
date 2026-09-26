@@ -1,5 +1,5 @@
 """
-MCP (Model Context Protocol) adapter for JEP-04.
+MCP (Model Context Protocol) adapter for JEP Core 0.7.
 """
 
 from typing import Callable
@@ -9,7 +9,7 @@ from jep_agent.recorder import record
 
 
 def wrap_mcp_tool(tool_func: Callable, issuer: str = "mcp:agent", private_key=None) -> Callable:
-    """Wrap an MCP tool function with JEP-04 recording."""
+    """Wrap an MCP tool function with JEP Core 0.7 recording."""
     return record(tool_func, issuer=issuer, private_key=private_key, auto_verify=True)
 
 
