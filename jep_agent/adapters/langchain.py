@@ -8,7 +8,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 from jep_agent.core.chain import AuditChain
-from jep_agent.primitives import judge, terminate, verify
+from jep_agent.core.event import event_identity_ref\nfrom jep_agent.primitives import judge, verify
 
 
 class _JEPCallbackHandler:
@@ -21,7 +21,7 @@ class _JEPCallbackHandler:
         storage_path: Optional[str] = None,
     ):
         self.chain = AuditChain(issuer=issuer, private_key=private_key, storage_path=storage_path)
-        self._run_stack: List[str] = []
+        self._run_stack: List[Dict[str, Any]] = []\n        self._tool_stack: List[Dict[str, Any]] = []
 
     def on_chain_start(
         self,
@@ -30,24 +30,29 @@ class _JEPCallbackHandler:
         **kwargs: Any,
     ) -> Any:
         content = {"type": "chain_start", "inputs": inputs or {}}
-        ev = judge(who=self.chain.issuer, content=content)
-        self.chain.append(ev)
-        self._run_stack.append(str(kwargs.get("run_id") or ev["nonce"]))
+        ev = self.chain.append(judge(who=self.chain.issuer, content=content))
+        self._tool_stack.append(event_identity_ref(ev))
+        self._run_stack.append(event_identity_ref(ev))
 
     def on_chain_end(self, outputs: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
-        content = {"type": "chain_end", "outputs": outputs or {}}
-        ev = verify(who=self.chain.issuer, content=content)
-        self.chain.append(ev)
-        if self._run_stack:
-            self._run_stack.pop()
+        ref = self._run_stack.pop() if self._run_stack else None
+        if ref is not None:
+            self.chain.append(verify(
+                who=self.chain.issuer,
+                ref=ref,
+                verification_scope=["execution_result"],
+                result={"status": "completed", "outputs": outputs or {}},
+            ))
 
     def on_chain_error(self, error: Exception, **kwargs: Any) -> Any:
-        content = {"type": "chain_error", "error": str(error)}
-        ev = terminate(who=self.chain.issuer, content=content)
-        self.chain.append(ev)
-
-        if self._run_stack:
-            self._run_stack.pop()
+        ref = self._run_stack.pop() if self._run_stack else None
+        if ref is not None:
+            self.chain.append(verify(
+                who=self.chain.issuer,
+                ref=ref,
+                verification_scope=["execution_result"],
+                result={"status": "error", "error": str(error)},
+            ))
 
     def on_tool_start(
         self,
@@ -57,8 +62,8 @@ class _JEPCallbackHandler:
     ) -> Any:
         tool_name = serialized.get("name") if serialized else "unknown"
         content = {"type": "tool_start", "tool": tool_name, "input": input_str}
-        ev = judge(who=self.chain.issuer, content=content)
-        self.chain.append(ev)
+        ev = self.chain.append(judge(who=self.chain.issuer, content=content))
+        self._tool_stack.append(event_identity_ref(ev))
 
     def on_tool_end(
         self,
@@ -66,17 +71,24 @@ class _JEPCallbackHandler:
         observation: Optional[str] = None,
         **kwargs: Any,
     ) -> Any:
-        content = {
-            "type": "tool_end",
-            "output": str(output) if output else str(observation),
-        }
-        ev = verify(who=self.chain.issuer, content=content)
-        self.chain.append(ev)
+        ref = self._tool_stack.pop() if self._tool_stack else None
+        if ref is not None:
+            self.chain.append(verify(
+                who=self.chain.issuer,
+                ref=ref,
+                verification_scope=["execution_result"],
+                result={"status": "completed", "output": str(output) if output else str(observation)},
+            ))
 
     def on_tool_error(self, error: Exception, **kwargs: Any) -> Any:
-        content = {"type": "tool_error", "error": str(error)}
-        ev = terminate(who=self.chain.issuer, content=content)
-        self.chain.append(ev)
+        ref = self._tool_stack.pop() if self._tool_stack else None
+        if ref is not None:
+            self.chain.append(verify(
+                who=self.chain.issuer,
+                ref=ref,
+                verification_scope=["execution_result"],
+                result={"status": "error", "error": str(error)},
+            ))
 
     def export(self) -> List[Dict[str, Any]]:
         return self.chain.events
