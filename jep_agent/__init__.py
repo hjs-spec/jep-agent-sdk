@@ -1,5 +1,7 @@
-"""
-JEP-Agent SDK 2.1\nAgent tracing helpers aligned with JEP Core 0.7.\nChain/JAC behavior is companion semantics, not JEP Core.
+"""JEP-Agent SDK 2.1.
+
+Agent tracing helpers aligned with JEP Core 0.7.
+Chain/JAC behavior is companion semantics, not JEP Core.
 """
 
 from jep_agent.core.chain import AuditChain
