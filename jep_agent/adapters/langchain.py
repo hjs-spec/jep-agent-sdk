@@ -1,14 +1,12 @@
-"""
-LangChain integration — TRUE zero-code tracing.
-Usage:
-    import jep_agent.adapters.langchain.auto   # <-- That's it.
-"""
+"""LangChain tracing adapter for JEP Core 0.7."""
+from __future__ import annotations
 
 import sys
 from typing import Any, Dict, List, Optional
 
 from jep_agent.core.chain import AuditChain
-from jep_agent.core.event import event_identity_ref\nfrom jep_agent.primitives import judge, verify
+from jep_agent.core.event import event_identity_ref
+from jep_agent.primitives import judge, verify
 
 
 class _JEPCallbackHandler:
@@ -21,7 +19,8 @@ class _JEPCallbackHandler:
         storage_path: Optional[str] = None,
     ):
         self.chain = AuditChain(issuer=issuer, private_key=private_key, storage_path=storage_path)
-        self._run_stack: List[Dict[str, Any]] = []\n        self._tool_stack: List[Dict[str, Any]] = []
+        self._run_stack: List[Dict[str, Any]] = []
+        self._tool_stack: List[Dict[str, Any]] = []
 
     def on_chain_start(
         self,
@@ -29,30 +28,34 @@ class _JEPCallbackHandler:
         inputs: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        content = {"type": "chain_start", "inputs": inputs or {}}
-        ev = self.chain.append(judge(who=self.chain.issuer, content=content))
-        self._tool_stack.append(event_identity_ref(ev))
+        ev = self.chain.append(judge(
+            who=self.chain.issuer,
+            what={"claim": "chain_start", "inputs": inputs or {}},
+        ))
         self._run_stack.append(event_identity_ref(ev))
+        return ev
 
     def on_chain_end(self, outputs: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Any:
         ref = self._run_stack.pop() if self._run_stack else None
-        if ref is not None:
-            self.chain.append(verify(
-                who=self.chain.issuer,
-                ref=ref,
-                verification_scope=["execution_result"],
-                result={"status": "completed", "outputs": outputs or {}},
-            ))
+        if ref is None:
+            return None
+        return self.chain.append(verify(
+            who=self.chain.issuer,
+            ref=ref,
+            verification_scope=["execution_result"],
+            result={"status": "completed", "outputs": outputs or {}},
+        ))
 
     def on_chain_error(self, error: Exception, **kwargs: Any) -> Any:
         ref = self._run_stack.pop() if self._run_stack else None
-        if ref is not None:
-            self.chain.append(verify(
-                who=self.chain.issuer,
-                ref=ref,
-                verification_scope=["execution_result"],
-                result={"status": "error", "error": str(error)},
-            ))
+        if ref is None:
+            return None
+        return self.chain.append(verify(
+            who=self.chain.issuer,
+            ref=ref,
+            verification_scope=["execution_result"],
+            result={"status": "error", "error": str(error)},
+        ))
 
     def on_tool_start(
         self,
@@ -61,9 +64,12 @@ class _JEPCallbackHandler:
         **kwargs: Any,
     ) -> Any:
         tool_name = serialized.get("name") if serialized else "unknown"
-        content = {"type": "tool_start", "tool": tool_name, "input": input_str}
-        ev = self.chain.append(judge(who=self.chain.issuer, content=content))
+        ev = self.chain.append(judge(
+            who=self.chain.issuer,
+            what={"claim": "tool_start", "tool": tool_name, "input": input_str},
+        ))
         self._tool_stack.append(event_identity_ref(ev))
+        return ev
 
     def on_tool_end(
         self,
@@ -72,33 +78,34 @@ class _JEPCallbackHandler:
         **kwargs: Any,
     ) -> Any:
         ref = self._tool_stack.pop() if self._tool_stack else None
-        if ref is not None:
-            self.chain.append(verify(
-                who=self.chain.issuer,
-                ref=ref,
-                verification_scope=["execution_result"],
-                result={"status": "completed", "output": str(output) if output else str(observation)},
-            ))
+        if ref is None:
+            return None
+        return self.chain.append(verify(
+            who=self.chain.issuer,
+            ref=ref,
+            verification_scope=["execution_result"],
+            result={"status": "completed", "output": str(output) if output else str(observation)},
+        ))
 
     def on_tool_error(self, error: Exception, **kwargs: Any) -> Any:
         ref = self._tool_stack.pop() if self._tool_stack else None
-        if ref is not None:
-            self.chain.append(verify(
-                who=self.chain.issuer,
-                ref=ref,
-                verification_scope=["execution_result"],
-                result={"status": "error", "error": str(error)},
-            ))
+        if ref is None:
+            return None
+        return self.chain.append(verify(
+            who=self.chain.issuer,
+            ref=ref,
+            verification_scope=["execution_result"],
+            result={"status": "error", "error": str(error)},
+        ))
 
     def export(self) -> List[Dict[str, Any]]:
-        return self.chain.events
+        return self.chain.export()
 
     def save(self, path: Optional[str] = None):
         self.chain.save(path)
 
 
 def _patch_langchain():
-    """Monkey-patch LangChain AgentExecutor to auto-inject JEP callbacks."""
     try:
         from langchain.agents import AgentExecutor as _OrigAgentExecutor
     except ImportError:
@@ -108,33 +115,22 @@ def _patch_langchain():
             return
 
     _orig_init = _OrigAgentExecutor.__init__
-    _orig_run = (
-        _OrigAgentExecutor.invoke
-        if hasattr(_OrigAgentExecutor, "invoke")
-        else _OrigAgentExecutor.run
-    )
+    _orig_run = _OrigAgentExecutor.invoke if hasattr(_OrigAgentExecutor, "invoke") else _OrigAgentExecutor.run
 
     def _jep_init(self, *args, **kwargs):
         _orig_init(self, *args, **kwargs)
         if not hasattr(self, "_jep_handler"):
             self._jep_handler = _JEPCallbackHandler()
-        callbacks = list(kwargs.get("callbacks", []))
-        if isinstance(callbacks, list) and self._jep_handler not in callbacks:
-            callbacks.append(self._jep_handler)
-            kwargs["callbacks"] = callbacks
-            if hasattr(self, "callbacks"):
-                if isinstance(self.callbacks, list):
-                    if self._jep_handler not in self.callbacks:
-                        self.callbacks.append(self._jep_handler)
+        if hasattr(self, "callbacks") and isinstance(self.callbacks, list) and self._jep_handler not in self.callbacks:
+            self.callbacks.append(self._jep_handler)
 
     def _jep_run(self, *args, **kwargs):
         if not hasattr(self, "_jep_handler"):
             self._jep_handler = _JEPCallbackHandler()
-        callbacks = kwargs.get("callbacks", [])
-        if isinstance(callbacks, list):
-            if self._jep_handler not in callbacks:
-                callbacks = callbacks + [self._jep_handler]
-                kwargs["callbacks"] = callbacks
+        callbacks = list(kwargs.get("callbacks", []))
+        if self._jep_handler not in callbacks:
+            callbacks.append(self._jep_handler)
+            kwargs["callbacks"] = callbacks
         return _orig_run(self, *args, **kwargs)
 
     _OrigAgentExecutor.__init__ = _jep_init
@@ -149,7 +145,6 @@ def enable_tracing(
     private_key=None,
     storage_path: Optional[str] = None,
 ):
-    """Explicit tracing with callback instance (for manual injection)."""
     return _JEPCallbackHandler(issuer=issuer, private_key=private_key, storage_path=storage_path)
 
 
