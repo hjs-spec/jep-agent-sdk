@@ -1,3 +1,7 @@
+# Release 2.1.1
+
+Publish the repaired Core 0.7 package, including import fixes, independent conformance vectors, strict verification and safe HTML reports. Package metadata is checked before publication.
+
 # Core 0.7 source repair (2.1 line)
 
 Fix package import failures and complete the current Core 0.7 path: baseline signing, strict input handling, critical-extension rejection, exact-artifact hashes, typed references, companion chain/task separation, safe HTML export, examples and documentation.
