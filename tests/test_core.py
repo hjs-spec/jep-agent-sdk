@@ -2,7 +2,7 @@
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from jep_agent.core.chain import AuditChain, CHAIN_EXTENSION
+from jep_agent.core.chain import CHAIN_EXTENSION, AuditChain
 from jep_agent.core.event import build_event, canonicalize, event_hash
 
 
