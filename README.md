@@ -64,7 +64,7 @@ jep-agent web --port 8080
 
 The CLI checks Core signatures and any local audit-chain links. It does not resolve arbitrary external references. The viewer and HTML export show recorded relationships and **Signed (unverified)** status; visual links do not establish causality or legal responsibility.
 
-Framework adapters are experimental: the OpenAI adapter targets synchronous Chat Completions, and the LangChain auto patch targets historical AgentExecutor APIs. Current Agents SDK integrations use the separate middleware repository.
+Framework adapters are experimental: the OpenAI adapter targets synchronous Chat Completions, and the LangChain auto patch targets historical AgentExecutor APIs. New signed integrations use the [callable recording path](docs/INTEGRATIONS.md). The separate Agents SDK middleware is a retired unsigned observation experiment; it is not the maintained Core integration path.
 
 ## Development
 
