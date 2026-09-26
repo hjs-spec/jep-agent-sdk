@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Explicitly classify this package as a historical JEP-04/JAC-01 implementation.
+- Do not use its nonce, embedded-payload JWS, bare-hash chain reference, or
+  replay behavior as JEP Core 0.7 semantics.
+- New JEP Core 0.7 integrations should use the 0.7 SDK/API path.
+- Historical events remain unchanged and require explicit legacy handling.
+
+# Changelog
+
 ## 2.0.0
 
 - Move the legacy Python namespace to `jep_agent` and CLI to `jep-agent`; see MIGRATION-2.md.
