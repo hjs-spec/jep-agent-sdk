@@ -27,7 +27,7 @@ class TraceManager:
             print("No events recorded.")
             return
         for ev in self.chain.events:
-            print(f"[{ev.get('verb','?')}] {ev.get('who','?')} @ {ev.get('when','?')} | what={str(ev.get('what','?'))[:40]}...")
+            summary = (\n                f"[{ev.get('verb', '?')}] {ev.get('who', '?')} @ " \n                f"{ev.get('when', '?')} | what={str(ev.get('what', '?'))[:40]}..."\n            )\n            print(summary)
 
     def export(self)->list:
         return self.chain.export() if self.chain else []
@@ -40,7 +40,7 @@ class TraceManager:
 trace=TraceManager()
 
 
-def record(func: Callable=None,*,issuer: str="agent:default",private_key=None,chain: Optional[AuditChain]=None,auto_verify: bool=True):
+def record(\n    func: Callable = None,\n    *,\n    issuer: str = "agent:default",\n    private_key=None,\n    chain: Optional[AuditChain] = None,\n    auto_verify: bool = True,\n):
     if chain is None:
         chain=AuditChain(issuer=issuer,private_key=private_key)
 
