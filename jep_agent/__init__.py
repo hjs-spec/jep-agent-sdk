@@ -1,7 +1,5 @@
 """
-JEP-Agent SDK 2.0
-Reference implementation of draft-wang-jep-judgment-event-protocol-04
-with JAC-01 extension support.
+JEP-Agent SDK 2.1\nAgent tracing helpers aligned with JEP Core 0.7.\nChain/JAC behavior is companion semantics, not JEP Core.
 """
 
 from jep_agent.core.chain import AuditChain
@@ -47,4 +45,4 @@ __all__ = [
     "verify_jac_core",
 ]
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
