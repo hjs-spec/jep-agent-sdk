@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jep-agent-sdk"
-version = "2.1.2"
+version = "2.1.3"
 description = "Agent tracing SDK aligned with JEP Core 0.7; companion chain semantics remain outside Core"
 readme = "README.md"
 license = "BSD-3-Clause"
