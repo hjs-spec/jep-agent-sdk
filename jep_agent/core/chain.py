@@ -1,23 +1,29 @@
-"""
-Audit chain maintenance with hash-linking.
+"""Audit-chain composition above JEP Core 0.7.
+
+Chain ordering is carried in an extension; Core ref remains available for
+verb semantics such as T/V targets and is not overloaded as an implicit
+previous-event hash pointer.
 """
 
-import hashlib
 import json
 import os
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
-from jep_agent.core.event import canonicalize, sign_event, verify_event_signature
+from jep_agent.core.event import event_hash, sign_event, verify_event_signature
+
+CHAIN_EXT = "org.hjs.audit-chain"
+
+
+def event_reference(event: Dict[str, Any], *, pin_artifact: bool = True) -> Dict[str, Any]:
+    ref = {"type": "jep:event", "value": {"who": event["who"], "id": event["id"]}}
+    if pin_artifact and event.get("sig"):
+        ref["hash"] = event_hash(event)
+    return ref
 
 
 class AuditChain:
-    def __init__(
-        self,
-        issuer: str,
-        private_key=None,
-        storage_path: Optional[str] = None,
-    ):
+    def __init__(self, issuer: str, private_key=None, storage_path: Optional[str] = None):
         self.issuer = issuer
         self.private_key = private_key
         self.events: List[Dict[str, Any]] = []
@@ -26,29 +32,18 @@ class AuditChain:
     def append(self, event: Dict[str, Any]) -> Dict[str, Any]:
         event = deepcopy(event)
         event["who"] = self.issuer
-
         if self.events:
-            prev = self.events[-1]
-            prev_hash = "sha256:" + hashlib.sha256(canonicalize(prev)).hexdigest()
-            if event.get("ref") is None:
-                event["ref"] = prev_hash
-
+            ext = deepcopy(event.get("ext") or {})
+            ext[CHAIN_EXT] = {"previous": event_reference(self.events[-1], pin_artifact=True)}
+            event["ext"] = ext
         if self.private_key is not None:
             event = sign_event(event, self.private_key)
-
         self.events.append(event)
-
         if self.storage_path:
             self._flush()
-
         return deepcopy(event)
 
     def verify_chain(self, public_key=None) -> bool:
-        """Verify signatures and legacy-04 links, including the first event.
-
-        Imported archives need the trusted public key. Unsigned traces cannot
-        establish integrity and never return True from this method.
-        """
         if public_key is None and self.private_key is not None:
             public_key = self.private_key.public_key()
         if not self.events or public_key is None:
@@ -56,13 +51,10 @@ class AuditChain:
         if not all(verify_event_signature(ev, public_key) for ev in self.events):
             return False
         for i in range(1, len(self.events)):
-            prev = self.events[i - 1]
-            curr = self.events[i]
-
-            expected_ref = "sha256:" + hashlib.sha256(canonicalize(prev)).hexdigest()
-            if curr.get("ref") != expected_ref:
+            previous = self.events[i - 1]
+            link = (self.events[i].get("ext") or {}).get(CHAIN_EXT, {}).get("previous")
+            if link != event_reference(previous, pin_artifact=True):
                 return False
-
         return True
 
     def export(self) -> List[Dict[str, Any]]:
