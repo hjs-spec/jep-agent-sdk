@@ -115,13 +115,13 @@ def _patch_langchain():
             return
 
     _orig_init = _OrigAgentExecutor.__init__
-    _orig_run = _OrigAgentExecutor.invoke if hasattr(_OrigAgentExecutor, "invoke") else _OrigAgentExecutor.run
+    _orig_run = (\n        _OrigAgentExecutor.invoke\n        if hasattr(_OrigAgentExecutor, "invoke")\n        else _OrigAgentExecutor.run\n    )
 
     def _jep_init(self, *args, **kwargs):
         _orig_init(self, *args, **kwargs)
         if not hasattr(self, "_jep_handler"):
             self._jep_handler = _JEPCallbackHandler()
-        if hasattr(self, "callbacks") and isinstance(self.callbacks, list) and self._jep_handler not in self.callbacks:
+        if (\n            hasattr(self, "callbacks")\n            and isinstance(self.callbacks, list)\n            and self._jep_handler not in self.callbacks\n        ):
             self.callbacks.append(self._jep_handler)
 
     def _jep_run(self, *args, **kwargs):
