@@ -73,10 +73,18 @@ class JEPVerifier:
                 "status": "indeterminate" if indeterminate else "invalid",
                 "mode": mode,
                 "profile": "jep-core-0.7",
-                "event_identity": {
-                    "who": ev.get("who") if isinstance(ev, dict) else None,
-                    "id": ev.get("id") if isinstance(ev, dict) else None,
-                },
+                "event_identity": (
+                    {"who": ev["who"], "id": ev["id"]}
+                    if (
+                        isinstance(ev, dict)
+                        and isinstance(ev.get("who"), str)
+                        and ev["who"]
+                        and isinstance(ev.get("id"), str)
+                        and ev["id"]
+                        and ev["id"].isascii()
+                    )
+                    else None
+                ),
                 "event_hash": None,
                 "checks": checks,
                 "warnings": [],

@@ -22,3 +22,22 @@ def test_tamper_detection():
     signed = sign_event(build_event("J", "agent", {"claim": "x"}), key)
     signed["what"] = {"claim": "tampered"}
     assert not verify_payload_integrity(signed, key.public_key())
+
+
+def test_integer_wire_spelling_preserves_large_jcs_number():
+    import json
+
+    import pytest
+
+    from jep_agent.core.event import canonicalize, event_hash
+
+    key = Ed25519PrivateKey.generate()
+    signed = sign_event(build_event("J", "actor", {"value": 1e20}), key)
+    wire = json.dumps(signed).replace("1e+20", "100000000000000000000")
+    parsed = json.loads(wire)
+    assert verify_event_signature(parsed, key.public_key())
+    assert event_hash(parsed) == event_hash(signed)
+    assert type(signed["what"]["value"]) is float
+    for value in (2**53 + 1, 10**400):
+        with pytest.raises(ValueError):
+            canonicalize({"value": value})

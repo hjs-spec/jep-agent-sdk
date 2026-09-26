@@ -1,9 +1,9 @@
-# Release 2.1.1
+# Release 2.1.2
 
-Publish the repaired Core 0.7 package, including import fixes, independent conformance vectors, strict verification and safe HTML reports. Package metadata is checked before publication.
+- Preserve JCS signatures when exactly representable large numbers arrive in integer-token form after JavaScript serialization (for example `1e20`). Reject precision-losing integers and keep `when` within its existing interoperable integer range.
 
-# Core 0.7 source repair (2.1 line)
+- Return `event_identity: null` for missing, empty or mistyped event identities in invalid-event diagnostics. Error responses now remain consumable by Core 0.7 result readers.
+- Reject malformed identities without consuming acceptance state.
+- Point package documentation to the current API guide.
 
-Fix package import failures and complete the current Core 0.7 path: baseline signing, strict input handling, critical-extension rejection, exact-artifact hashes, typed references, companion chain/task separation, safe HTML export, examples and documentation.
-
-CI verifies pinned Core J/D/T/V vectors, an independent validator, packaging coexistence and Python 3.10–3.13. Package-index publication is a separate action; merging this repair does not change an existing release or publish a new version. Historical 2.0.x archives require the corresponding legacy verifier.
+Core 0.7 behavior and valid event signatures are unchanged. The in-memory acceptance store remains a local reference implementation.
