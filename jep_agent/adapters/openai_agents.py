@@ -1,6 +1,7 @@
 """Legacy OpenAI Chat Completions instrumentation for JEP Core 0.7.
 
-The current Agents SDK uses the separate middleware.
+The separate Agents SDK RunHooks middleware is a retired unsigned experiment.
+For maintained signed callable recording, see docs/INTEGRATIONS.md.
 """
 
 import sys
