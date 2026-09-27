@@ -153,23 +153,20 @@
             updateStats();
         }
 
-        function loadFile(file) {
-            const reader = new FileReader();
-            reader.onload = async e => {
-                try {
-                    const lines = e.target.result.split('\n');
-                    const imported = [];
-                    lines.forEach((line, index) => {
-                        if (!line.trim()) return;
-                        try { imported.push(parseArchiveJSON(line)); }
-                        catch (error) { throw new Error('Line ' + (index + 1) + ': ' + error.message); }
-                    });
-                    await setEvents(imported);
-                } catch (error) {
-                    alert('Could not load events: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
+        async function loadFile(file) {
+            try {
+                const text = new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(await file.arrayBuffer());
+                const lines = text.split('\n');
+                const imported = [];
+                lines.forEach((line, index) => {
+                    if (!line.trim()) return;
+                    try { imported.push(parseArchiveJSON(line)); }
+                    catch (error) { throw new Error('Line ' + (index + 1) + ': ' + error.message); }
+                });
+                await setEvents(imported);
+            } catch (error) {
+                alert('Could not load events: ' + error.message);
+            }
         }
         
         function updateStats() {

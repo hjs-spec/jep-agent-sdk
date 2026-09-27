@@ -101,7 +101,7 @@ function create(saved = '') {
             appendChild(child) {this.children.push(child)}, textContent: '',
             set innerHTML(value) {this.children = []}};
     }
-    const context = {crypto: webcrypto, TextEncoder, console,
+    const context = {crypto: webcrypto, TextEncoder, TextDecoder, console,
         alert(message) {throw Error(message)},
         window: {addEventListener() {}},
         document: {addEventListener(name, fn) {handlers[name] = fn},
@@ -131,7 +131,13 @@ function create(saved = '') {
         '{"a":[{"k":1},{"k":2}],"value":1000000000000000100}',
         '{"value":1000000000000000128,"a":[true,false,null,"a\\\\\\"b"]}'
     ]) current.context.parseArchiveJSON(text);
-    await current.context.setEvents(input.events);
+    const bytes = new TextEncoder().encode(input.events.map(e => JSON.stringify(e)).join('\n'));
+    await current.context.loadFile({arrayBuffer: async () => bytes.buffer});
+    let badEncoding = false;
+    try {
+        await current.context.loadFile({arrayBuffer: async () => new Uint8Array([255]).buffer});
+    } catch {badEncoding = true}
+    if (!badEncoding) throw Error('Invalid UTF-8 was silently replaced');
     const count = () => vm.runInContext('links.length', current.context);
     if (count() !== 1) throw Error('Exact pin did not select the earlier artifact');
     const conflicting = structuredClone(input.events);
