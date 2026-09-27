@@ -155,14 +155,17 @@ def _generate_full_report(events, title):
     nodes = []
     links = []
     identities = {}
+    artifacts = {}
 
     for index, event in enumerate(events):
         key = _identity_key(event)
-        identities[key] = index
+        identities.setdefault(key, []).append(index)
+        digest = event_hash(event)
+        artifacts.setdefault(digest, index)
         nodes.append(
             {
                 "id": key,
-                "event_hash": event_hash(event),
+                "event_hash": digest,
                 "verb": event.get("verb"),
                 "who": event.get("who"),
                 "event_id": event.get("id"),
@@ -172,25 +175,39 @@ def _generate_full_report(events, title):
             }
         )
 
+    def resolve(ref):
+        if isinstance(ref, str):
+            return artifacts.get(ref)
+        candidates = identities.get(_ref_key(ref), [])
+        if isinstance(ref, dict) and "hash" in ref:
+            candidates = [i for i in candidates if nodes[i]["event_hash"] == ref["hash"]]
+        # Conflicting artifacts with one identity require an exact artifact pin.
+        if len({nodes[i]["event_hash"] for i in candidates}) == 1:
+            return candidates[0]
+        return None
+
     for index, event in enumerate(events):
-        ref_key = _ref_key(event.get("ref"))
-        if ref_key in identities:
+        target = resolve(event.get("ref"))
+        if target is not None:
             links.append(
                 {
-                    "source": identities[ref_key],
+                    "source": target,
                     "target": index,
                     "type": "ref",
                 }
             )
 
-        chain = (event.get("ext") or {}).get(CHAIN_EXTENSION)
+        ext = event.get("ext")
+        chain = ext.get(CHAIN_EXTENSION) if isinstance(ext, dict) else None
         if isinstance(chain, dict) and isinstance(chain.get("previous"), dict):
             previous = chain["previous"]
-            prev_key = _identity_key(previous)
-            if prev_key in identities:
+            target = resolve(
+                {"type": "jep:event", "value": previous, "hash": chain.get("artifact_hash")}
+            )
+            if target is not None:
                 links.append(
                     {
-                        "source": identities[prev_key],
+                        "source": target,
                         "target": index,
                         "type": "chain",
                     }
