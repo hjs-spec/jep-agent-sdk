@@ -14,9 +14,41 @@ pip install 'jep-agent-sdk[langchain,openai]'
 
 For source development, clone this repository and use `pip install -e '.[dev]'`. Imports use `jep_agent`; the command is `jep-agent`, independent of `jep-sdk-py` and `jep-cli`.
 
+## Local create → export → independent verification
+
+No API, account or hosted service is required after installing dependencies.
+The runnable example is maintained in this repository:
+
+```sh
+git clone --branch v2.1.6 --depth 1 https://github.com/hjs-spec/jep-agent-sdk.git
+cd jep-agent-sdk
+python -m pip install jep-agent-sdk==2.1.6
+python examples/local_roundtrip.py create ./local-evidence
+python examples/local_roundtrip.py verify ./local-evidence
+```
+
+The second command starts a separate process. The directory contains `event.json`,
+`public-key.pem` and `keys.json`; the temporary private key is never exported.
+Verification reports `status: valid`, `cryptographic: pass` and the original
+Event Hash. Existing directories are never overwritten.
+
+An independently implemented Core verifier can check the same files:
+
+```sh
+python -m pip install jep-core-conformance==0.7.5
+jep-validate ./local-evidence/event.json --keys ./local-evidence/keys.json
+```
+
+These are synthetic demonstration keys. A public key shipped with a record proves
+signature consistency, not who supplied the record; real actor binding requires
+an independently trusted key/profile. No freshness, policy, completion or payment
+claim is implied. Changing the signed claim causes verification to fail.
+
 ## Signed trace
 
 ```python
+from pathlib import Path
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from jep_agent import AuditChain, record
 
@@ -30,6 +62,9 @@ def task(value):
 assert task(21) == 42
 assert chain.verify_chain(key.public_key())
 chain.save("events.jsonl")
+Path("public-key.pem").write_bytes(key.public_key().public_bytes(
+    serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+))
 ```
 
 Recording without a key is allowed for local traces, but produces unsigned, unverified records. Use a securely persisted key in a real deployment; this example generates a temporary key.
@@ -49,7 +84,7 @@ Recording without a key is allowed for local traces, but produces unsigned, unve
 | Unknown critical extension | Rejected before acceptance |
 | Audit-chain linkage | `ext['jep-agent.chain']`; separate from Core `ref` |
 | Research helpers | Optional finite-model determinability; outside Core/TSTO validation |
-| Task linkage | Local `ext['jep-agent.jac']` companion; no formal JAC conformance claim |
+| Task linkage | Local `ext['jep-agent.jac']`; no formal JAC conformance claim |
 
 The in-memory `JEPVerifier` acceptance store is for a single process. It is not a durable distributed acceptance service. An independently trusted public key must be supplied; `kid` alone does not prove actor identity. Reference resolution, actor binding, domain policy and external effects remain unchecked unless provided by a separate profile or application.
 
