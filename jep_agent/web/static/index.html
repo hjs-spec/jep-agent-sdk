@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JEP Causal Audit Viewer</title>
+    <title>JEP Event Viewer</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b0f19; color: #e2e8f0; min-height: 100vh; overflow: hidden; }
@@ -39,10 +39,10 @@
 </head>
 <body>
     <div class="header">
-        <h1>JEP Causal Audit Viewer <span class="badge">v1.0</span></h1>
+        <h1>JEP Event Viewer <span class="badge">Core 0.7</span></h1>
         <div class="stats">
             <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Events</div></div>
-            <div class="stat"><div class="num" id="statChains">0</div><div class="label">Chains</div></div>
+            <div class="stat"><div class="num" id="statChains">0</div><div class="label">Declared links</div></div>
             <div class="stat" title="Signature present; cryptographic verification has not been performed"><div class="num" id="statSigned">0</div><div class="label">Signed (unverified)</div></div>
         </div>
     </div>
@@ -78,6 +78,7 @@
         <div class="legend-item"><div class="dot" style="background:#a78bfa"></div>Cross-Agent</div>
     </div>
 
+    <script id="embeddedArchive" type="application/json"></script>
     <script>
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -92,6 +93,38 @@
         dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = '#334155'; if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
         fileInput.addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
         
+        function parseArchiveJSON(text) {
+            const value = JSON.parse(text);
+            // JSON.parse establishes grammar; scan the same tokens before accepting
+            // duplicate names or integer tokens rounded silently by binary64.
+            const tokens = text.match(/"(?:[^"\\]|\\[\s\S])*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}\[\],:]/g) || [];
+            const stack = [];
+            for (const token of tokens) {
+                if (token === '{') stack.push({ keys: new Set(), key: true });
+                else if (token === '[') stack.push(null);
+                else if (token === '}' || token === ']') stack.pop();
+                else if (token === ',') {
+                    if (stack[stack.length - 1]) stack[stack.length - 1].key = true;
+                } else if (token[0] === '"') {
+                    const object = stack[stack.length - 1];
+                    if (object && object.key) {
+                        const name = JSON.parse(token);
+                        if (object.keys.has(name)) throw new Error('Duplicate JSON member');
+                        object.keys.add(name);
+                        object.key = false;
+                    }
+                } else if (/^-?\d/.test(token)) {
+                    const number = Number(token);
+                    if (!Number.isFinite(number)) throw new Error('Non-finite number');
+                    if (/^-?\d+$/.test(token) && BigInt(token) !== BigInt(number) && JSON.stringify(number) !== token) {
+                        throw new Error('Integer cannot preserve canonical signed bytes');
+                    }
+                }
+            }
+            canonicalJSON(value);
+            return value;
+        }
+
         function canonicalJSON(value) {
             if (value === null || typeof value !== 'object') {
                 if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Non-finite number');
@@ -110,7 +143,8 @@
 
         async function setEvents(imported) {
             if (!Array.isArray(imported) || imported.some(e => !e || typeof e !== 'object' || Array.isArray(e))) throw new Error('Expected event objects');
-            if (imported.some(e => e.jep !== '1' || typeof e.id !== 'string' || !e.id || typeof e.who !== 'string')) throw new Error('Expected Core 0.7 identities; use the explicit legacy tools for pre-0.7 archives');
+            if (!imported.length) throw new Error('No events to display');
+            if (imported.some(e => e.jep !== '1' || typeof e.id !== 'string' || !e.id || typeof e.who !== 'string' || !e.who)) throw new Error('Expected Core 0.7 identities; use the explicit legacy tools for pre-0.7 archives');
             const hashes = await Promise.all(imported.map(eventHash));
             events = imported;
             eventHashes = hashes;
@@ -123,8 +157,14 @@
             const reader = new FileReader();
             reader.onload = async e => {
                 try {
-                    const lines = e.target.result.split('\n').filter(l => l.trim());
-                    await setEvents(lines.map(l => JSON.parse(l)));
+                    const lines = e.target.result.split('\n');
+                    const imported = [];
+                    lines.forEach((line, index) => {
+                        if (!line.trim()) return;
+                        try { imported.push(parseArchiveJSON(line)); }
+                        catch (error) { throw new Error('Line ' + (index + 1) + ': ' + error.message); }
+                    });
+                    await setEvents(imported);
                 } catch (error) {
                     alert('Could not load events: ' + error.message);
                 }
@@ -156,12 +196,18 @@
             links = [];
             const artifactMap = new Map(nodes.map(n => [n.id, n]));
             const identityKey = value => JSON.stringify([value.who, value.id]);
-            const identityMap = new Map(nodes.map(n => [identityKey(n.data), n]));
+            const identityMap = new Map();
+            nodes.forEach(n => {
+                const key = identityKey(n.data);
+                if (!identityMap.has(key)) identityMap.set(key, []);
+                identityMap.get(key).push(n);
+            });
             const resolve = ref => {
                 if (typeof ref === 'string') return artifactMap.get(ref);
                 if (!ref || ref.type !== 'jep:event' || !ref.value) return undefined;
-                const target = identityMap.get(identityKey(ref.value));
-                return target && (!ref.hash || ref.hash === target.id) ? target : undefined;
+                let candidates = identityMap.get(identityKey(ref.value)) || [];
+                if (Object.prototype.hasOwnProperty.call(ref, 'hash')) candidates = candidates.filter(n => ref.hash === n.id);
+                return new Set(candidates.map(n => n.id)).size === 1 ? candidates[0] : undefined;
             };
             events.forEach((e, i) => {
                 const target = resolve(e.ref);
@@ -275,14 +321,32 @@
         
         function resetZoom() { currentTransform = {x:0,y:0,k:1}; renderGraph(); }
         function toggleUpload() { uploadOverlay.classList.remove('hidden'); }
+        function reportHTML(template, archive) {
+            const data = JSON.stringify(archive).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+            const slot = /(<script id="embeddedArchive" type="application\/json">)[\s\S]*?(<\/script>)/;
+            if (!slot.test(template)) throw new Error('Report template is missing its archive slot');
+            return '<!doctype html>' + template.replace(slot, (_, open, close) => open + data + close);
+        }
+
         function exportReport() {
-            const html = document.documentElement.outerHTML;
+            const html = reportHTML(document.documentElement.outerHTML, events);
             const blob = new Blob([html], {type:'text/html'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'jep_audit_report.html';
             a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 0);
         }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const saved = document.getElementById('embeddedArchive').textContent.trim();
+            if (!saved) return;
+            try { await setEvents(parseArchiveJSON(saved)); }
+            catch (error) {
+                uploadOverlay.classList.remove('hidden');
+                alert('Could not restore report: ' + error.message);
+            }
+        });
         
         document.addEventListener('click', e => {
             if (!sidebar.contains(e.target) && !e.target.closest('circle')) sidebar.classList.remove('open');
