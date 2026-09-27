@@ -71,8 +71,11 @@ jobs:
         run: docker compose up --build --detach
       - name: Check the viewer HTTP entry
         run: |
-          curl --fail --retry 12 --retry-connrefused --retry-delay 2 --max-time 10 http://127.0.0.1:8080/ --output /tmp/viewer.html
+          curl --fail --retry 12 --retry-all-errors --retry-max-time 45 --retry-delay 2 --max-time 10 http://127.0.0.1:8080/ --output /tmp/viewer.html
           grep -q 'JEP Event Viewer' /tmp/viewer.html
+      - name: Show container diagnostics on failure
+        if: failure()
+        run: docker compose logs --no-color
       - name: Stop the viewer
         if: always()
         run: docker compose down
