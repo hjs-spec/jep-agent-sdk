@@ -48,6 +48,7 @@ Recording without a key is allowed for local traces, but produces unsigned, unve
 | Freshness / audience | Checked only when requested |
 | Unknown critical extension | Rejected before acceptance |
 | Audit-chain linkage | `ext['jep-agent.chain']`; separate from Core `ref` |
+| Research helpers | Optional finite-model determinability; outside Core/TSTO validation |
 | Task linkage | Local `ext['jep-agent.jac']` companion; no formal JAC conformance claim |
 
 The in-memory `JEPVerifier` acceptance store is for a single process. It is not a durable distributed acceptance service. An independently trusted public key must be supplied; `kid` alone does not prove actor identity. Reference resolution, actor binding, domain policy and external effects remain unchecked unless provided by a separate profile or application.
@@ -79,6 +80,7 @@ python scripts/check_coexistence.py dist/*.whl
 
 CI uses fixed Core 0.7 J/D/T/V vectors and a commit-pinned independent Core validator. It also installs the built wheel beside the Python SDK and CLI in both orders and checks independent uninstalls.
 
+- [Architecture and research-helper boundaries](docs/ARCHITECTURE.md)
 - [API](docs/API.md)
 - [Migration and historical compatibility](MIGRATION-0.7.md)
 - [Implementation limits](HARDENING.md)

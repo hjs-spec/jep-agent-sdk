@@ -1,40 +1,27 @@
-"""
-Example 6: DeterminabilityGuard — runtime evidence gate.
-"""
+"""Finite-model research guard; not JEP/TSTO verification or execution authority."""
 
 from jep_agent.determinability import DeterminabilityGuard
 
-
-def my_risky_agent(query: str, tools_used: list) -> str:
-    return f"Decision for {query}"
-
-
+# Use the actual argument context. These are synthetic observations/targets,
+# not claims that a tool list establishes sufficient real-world evidence.
 guard = DeterminabilityGuard(
-    evidence_fn=lambda ctx: len(ctx.get("tools_used", [])),
-    target_fn=lambda ctx: ctx.get("outcome"),
-    knowledge_base=[
-        {"tools_used": ["search", "calc"], "outcome": 1},
-        {"tools_used": ["search"], "outcome": 0},
-        {"tools_used": ["search", "calc", "verify"], "outcome": 1},
-    ],
+    evidence_fn=lambda ctx: ctx["args"][0],
+    target_fn=lambda ctx: ctx["args"][1],
+    knowledge_base=[{"args": ("observation-A", 1)}],
     on_insufficient="raise",
 )
 
 
 @guard.require_determinable
-def safe_agent(query: str, tools_used: list):
-    return my_risky_agent(query, tools_used)
+def compare_modeled_outcome(observation, outcome):
+    return outcome
 
 
 if __name__ == "__main__":
+    assert compare_modeled_outcome("observation-A", 1) == 1
     try:
-        result = safe_agent("complex query", tools_used=["search", "calc"])
-        print(f"✓ Allowed: {result}")
-    except RuntimeError as e:
-        print(f"✗ Blocked: {e}")
-    
-    try:
-        result = safe_agent("complex query", tools_used=["search"])
-        print(f"✓ Allowed: {result}")
-    except RuntimeError as e:
-        print(f"✗ Blocked (expected): {e}")
+        compare_modeled_outcome("observation-A", 0)
+    except RuntimeError:
+        print("Conflicting modeled outcome blocked; external truth remains unchecked.")
+    else:
+        raise AssertionError("Expected the modeled conflict to be blocked")

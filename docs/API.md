@@ -13,3 +13,12 @@
 CLI: `jep-agent verify`, `jep-agent export`, and `jep-agent web`. Graphs are views of recorded relationships, not proof of causal or legal conclusions. See [migration](../MIGRATION-0.7.md) for historical archives and signature profiles.
 
 The web viewer reads JSONL locally in the browser and rejects ambiguous or malformed JSON. Its separate local upload endpoint uses the SDK's strict JSON parser. HTML exported from the viewer embeds escaped event data so reopening the report restores its interactive view without a server. CLI HTML reports remain static tables. Both reports are unverified projections: exact artifact pins must match before a link is drawn, and conflicting artifacts with the same identity remain unresolved without a pin.
+
+## Optional finite-model helpers
+
+`check_determinability`, `conflict_edges`, `evidence_cover` and
+`DeterminabilityGuard` are research compatibility APIs, separate from Core and
+TSTO/Binding verification. See the [scope and guard modes](ARCHITECTURE.md#optional-research-helpers).
+A result applies only to the supplied model. Empty knowledge bases do not block
+execution; `warn` explicitly allows it. Invalid modes and `fallback` without a
+callable raise `ValueError` at construction.

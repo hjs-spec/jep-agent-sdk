@@ -45,3 +45,62 @@ def test_guard_blocks():
         good(["a"])
 
     assert good(["a", "b"]) == "ok"
+
+
+@pytest.mark.parametrize("mode", ["raies", "", None])
+def test_guard_rejects_unknown_mode_before_execution(mode):
+    with pytest.raises(ValueError, match="on_insufficient"):
+        DeterminabilityGuard(lambda c: 0, lambda c: c, on_insufficient=mode)
+
+
+@pytest.mark.parametrize("fallback", [None, False, "handler"])
+def test_guard_rejects_missing_or_noncallable_fallback(fallback):
+    with pytest.raises(ValueError, match="callable fallback"):
+        DeterminabilityGuard(
+            lambda c: 0, lambda c: c, on_insufficient="fallback", fallback=fallback
+        )
+
+
+class FalseyFallback:
+    def __bool__(self):
+        return False
+
+    def __call__(self, value):
+        return ("review", value)
+
+
+@pytest.mark.parametrize("fallback", [lambda value: ("review", value), FalseyFallback()])
+def test_guard_fallback_handles_conflict_without_running_guarded_function(fallback):
+    calls = []
+    guard = DeterminabilityGuard(
+        lambda c: 0,
+        lambda c: c.get("outcome", "new"),
+        knowledge_base=[{"outcome": "old"}],
+        on_insufficient="fallback",
+        fallback=fallback,
+    )
+
+    @guard.require_determinable
+    def execute(value):
+        calls.append(value)
+
+    assert execute("request") == ("review", "request")
+    assert calls == []
+
+
+def test_guard_warn_remains_an_explicit_allow_mode(capsys):
+    guard = DeterminabilityGuard(
+        lambda c: 0,
+        lambda c: c.get("outcome", "new"),
+        knowledge_base=[{"outcome": "old"}],
+        on_insufficient="warn",
+    )
+    calls = []
+
+    @guard.require_determinable
+    def execute():
+        calls.append("executed")
+
+    execute()
+    assert calls == ["executed"]
+    assert "WARNING" in capsys.readouterr().out
