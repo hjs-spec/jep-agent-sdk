@@ -335,7 +335,12 @@ def verify_event_signature(
         return False
 
     try:
-        header = parse_json(_base64url_decode(parts[0]))
+        header_bytes = _base64url_decode(parts[0])
+        # JWS current-baseline headers are UTF-8; do not auto-detect UTF-16/32.
+        # Historical decoding stays behind its explicit profile selection.
+        header = parse_json(
+            header_bytes.decode("utf-8") if signature_profile == "baseline-0.7" else header_bytes
+        )
         algorithm = {"baseline-0.7": "Ed25519", "legacy-eddsa": "EdDSA"}.get(signature_profile)
         valid_header = (
             isinstance(header, dict)

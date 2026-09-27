@@ -1,3 +1,14 @@
+# Software 2.1.6
+
+The current baseline explicitly decodes JWS protected headers as UTF-8 instead of
+allowing JSON encoding auto-detection. Explicit legacy profile behavior remains
+unchanged. Tests cover six UTF-16/32 forms, retained valid noncanonical UTF-8
+headers, and rejection before acceptance-state changes.
+
+A local create/export/verify example now writes an event and public verification
+material, reopens them in another process, rejects tampering and refuses to
+overwrite an existing directory. No API or private-key export is required.
+
 # Software 2.1.5
 
 - Reject unknown `DeterminabilityGuard` conflict modes and missing/noncallable fallback handlers at construction. These invalid configurations previously allowed the guarded function to execute despite a modeled conflict. Explicit `warn` mode still allows execution.
