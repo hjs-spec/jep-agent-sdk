@@ -1,6 +1,9 @@
 """
-CheckDeterminability + DeterminabilityGuard (runtime gate).
-Extension module, not part of JEP-04/JAC-01 core protocol.
+Finite-model determinability helpers retained for research compatibility.
+
+Independent of JEP Core and TSTO/Binding validation. A result describes only the
+supplied configurations; it does not establish external evidence sufficiency,
+execution authority, factual truth or completion.
 """
 
 import functools
@@ -48,7 +51,11 @@ def evidence_cover(configs, omega, target, evidences):
 
 class DeterminabilityGuard:
     """
-    Runtime gate: intercept agent execution if evidence is insufficient.
+    Optional application guard for conflicts in a caller-supplied finite model.
+
+    An empty knowledge base performs no comparison. ``warn`` intentionally allows
+    execution; ``raise`` blocks a modeled conflict and ``fallback`` calls the
+    supplied alternative. This is not a protocol or authorization verifier.
     """
 
     def __init__(
@@ -59,6 +66,10 @@ class DeterminabilityGuard:
         on_insufficient: str = "raise",
         fallback: Optional[Callable] = None,
     ):
+        if on_insufficient not in ("raise", "warn", "fallback"):
+            raise ValueError("on_insufficient must be raise, warn, or fallback")
+        if on_insufficient == "fallback" and not callable(fallback):
+            raise ValueError("fallback mode requires a callable fallback")
         self.evidence_fn = evidence_fn
         self.target_fn = target_fn
         self.knowledge_base = knowledge_base or []
@@ -95,17 +106,16 @@ class DeterminabilityGuard:
 
             if result[0] == "NotDetermined":
                 msg = (
-                    f"DeterminabilityGuard blocked {func.__name__}: "
-                    f"evidence insufficient. "
+                    f"DeterminabilityGuard found a modeled conflict for {func.__name__}. "
                     f"Counterexample: {result[1]} vs {result[2]} "
                     f"share observation {result[3]} but have different "
-                    f"outcomes. Add more evidence before proceeding."
+                    f"outcomes."
                 )
                 if self.on_insufficient == "raise":
                     raise RuntimeError(msg)
                 elif self.on_insufficient == "warn":
-                    print(f"[JEP WARNING] {msg}")
-                elif self.on_insufficient == "fallback" and self.fallback:
+                    print(f"[Determinability WARNING] {msg}")
+                elif self.on_insufficient == "fallback":
                     return self.fallback(*args, **kwargs)
 
             return func(*args, **kwargs)

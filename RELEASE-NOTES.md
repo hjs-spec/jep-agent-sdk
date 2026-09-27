@@ -1,3 +1,11 @@
+# Software 2.1.5
+
+- Reject unknown `DeterminabilityGuard` conflict modes and missing/noncallable fallback handlers at construction. These invalid configurations previously allowed the guarded function to execute despite a modeled conflict. Explicit `warn` mode still allows execution.
+- Replace the historical SDK architecture entry with the current component boundaries. Finite-model research helpers remain compatible optional APIs; they are not JEP Core checks, TSTO completion verification, or proof of real-world evidence sufficiency. The example now reads the actual call arguments and demonstrates a modeled conflict.
+- Simplify the viewer container to the base SDK; remove unused framework extras, compiler installation, archive mount and unused storage environment variable. CI builds the documented Compose configuration and checks its HTTP entry.
+
+Core wire/signature formats, existing signed archives and published protocol drafts are unchanged.
+
 # Software 2.1.4
 
 - Reject duplicate JSON members, non-finite/precision-losing numeric input and invalid Unicode before importing viewer archives. The local upload endpoint returns line-specific client errors for malformed records instead of silently replacing fields or returning a server error.
