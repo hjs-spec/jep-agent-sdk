@@ -30,9 +30,21 @@ events = chain.export()
 `auto_verify=False` records invocation and result observations as J statements.
 The default `True` records successful completion as a V statement scoped to
 `execution_result`; it does not independently establish the result's truth.
-The wrapper records `repr` of arguments and results. Pass minimized values or
-construct explicit events when redaction or digest-only evidence is required.
+Raw arguments and results are omitted by default. Set `capture_values=True` only
+when retaining their `repr` is explicitly acceptable; otherwise construct explicit
+events when redaction or digest-only evidence is required. Generator and
+async-generator functions are rejected rather than being marked complete before
+iteration finishes.
+
 Recording can fail after an external side effect; it is not an atomic execution log.
+A `RecordingError` with `call_executed=True` means the wrapped callable has already
+run and its business effect must not be blindly retried. If the callable itself
+raises or is cancelled and recording that outcome also fails, the original
+exception/cancellation remains primary. A `RuntimeWarning` reports the secondary
+recording failure; normal exception chaining is also retained where the Python
+runtime preserves it. Existing `AuditChain.storage_path` archives must be loaded before append;
+archive replacement is atomic and explicit overwrite requires
+`save(..., overwrite=True)`.
 
 Use `jep_agent.adapters.mcp.wrap_mcp_tool` for the existing simple MCP callable
 wrapper. Neither wrapper installs a framework-wide hook or enforces authorization.

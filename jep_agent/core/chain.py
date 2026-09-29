@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
@@ -27,6 +28,8 @@ class AuditChain:
         self.private_key = private_key
         self.events: List[Dict[str, Any]] = []
         self.storage_path = storage_path
+        self._storage_loaded = False
+        self._storage_created = False
 
     def append(self, event: Dict[str, Any]) -> Dict[str, Any]:
         ev = deepcopy(event)
@@ -41,9 +44,14 @@ class AuditChain:
             ev["ext"] = ext
         if self.private_key is not None:
             ev = sign_event(ev, self.private_key)
+
         self.events.append(ev)
-        if self.storage_path:
-            self._flush()
+        try:
+            if self.storage_path:
+                self._flush()
+        except Exception:
+            self.events.pop()
+            raise
         return deepcopy(ev)
 
     def verify_chain(self, public_key=None) -> bool:
@@ -68,18 +76,61 @@ class AuditChain:
     def export(self) -> List[Dict[str, Any]]:
         return deepcopy(self.events)
 
-    def save(self, path: Optional[str] = None):
+    def _is_storage_target(self, target: str) -> bool:
+        if self.storage_path is None:
+            return False
+        return os.path.abspath(os.fspath(target)) == os.path.abspath(os.fspath(self.storage_path))
+
+    def _atomic_save(self, target: str) -> None:
+        payload = "".join(json.dumps(ev, ensure_ascii=False) + "\n" for ev in self.events)
+        directory = os.path.dirname(os.path.abspath(target))
+        prefix = f".{os.path.basename(target)}."
+        fd, temporary = tempfile.mkstemp(prefix=prefix, suffix=".tmp", dir=directory, text=True)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, target)
+        except BaseException:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+            raise
+
+    def save(self, path: Optional[str] = None, *, overwrite: bool = False):
         target = path or self.storage_path
-        if target:
-            with open(target, "w", encoding="utf-8") as f:
-                for ev in self.events:
-                    f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+        if not target:
+            return
+
+        target = os.fspath(target)
+        managed = self._is_storage_target(target)
+        if os.path.exists(target):
+            allowed = overwrite or (managed and (self._storage_loaded or self._storage_created))
+            if not allowed:
+                raise FileExistsError(
+                    f"Refusing to overwrite existing audit archive: {target}. "
+                    "Load it before continuing or pass overwrite=True explicitly."
+                )
+
+        self._atomic_save(target)
+        if managed:
+            self._storage_created = True
 
     def load(self, path: Optional[str] = None):
         target = path or self.storage_path
-        if target and os.path.exists(target):
-            with open(target, "r", encoding="utf-8") as f:
-                self.events = [parse_json(line) for line in f if line.strip()]
+        if not target:
+            return
+
+        target = os.fspath(target)
+        managed = self._is_storage_target(target)
+        if os.path.exists(target):
+            with open(target, "r", encoding="utf-8") as handle:
+                loaded = [parse_json(line) for line in handle if line.strip()]
+            self.events = loaded
+        if managed:
+            self._storage_loaded = True
 
     def _flush(self):
         self.save()

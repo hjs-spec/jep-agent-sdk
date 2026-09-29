@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.7
+
+- Require a trusted key for boolean payload-integrity success.
+- Omit raw callable arguments and return values from `@record` by default; add explicit capture opt-in.
+- Reject generator and async-generator wrappers that cannot be represented as completed calls.
+- Preserve business exceptions and cancellation when secondary recording fails; add recording-stage metadata.
+- Make local audit archive updates atomic and prevent accidental overwrite of unknown existing archives.
+- Add explicit MCP archive-path configuration and safety-boundary regression coverage.
+
 ## 2.1.0
 
 - Migrate the default event model to JEP Core 0.7.
