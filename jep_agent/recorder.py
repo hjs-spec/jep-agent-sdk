@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+import warnings
 from typing import Callable, Optional
 
 from jep_agent.core.chain import AuditChain
@@ -210,6 +211,12 @@ def record(
                     stage="after_error",
                     call_executed=True,
                     start_event=start_event,
+                )
+                warnings.warn(
+                    "JEP outcome recording failed; preserving the wrapped callable's "
+                    f"{type(original_error).__name__} outcome",
+                    RuntimeWarning,
+                    stacklevel=2,
                 )
                 raise original_error from recording_error
 

@@ -40,8 +40,9 @@ Recording can fail after an external side effect; it is not an atomic execution 
 A `RecordingError` with `call_executed=True` means the wrapped callable has already
 run and its business effect must not be blindly retried. If the callable itself
 raises or is cancelled and recording that outcome also fails, the original
-exception/cancellation remains primary and the recording failure is chained as its
-cause. Existing `AuditChain.storage_path` archives must be loaded before append;
+exception/cancellation remains primary. A `RuntimeWarning` reports the secondary
+recording failure; normal exception chaining is also retained where the Python
+runtime preserves it. Existing `AuditChain.storage_path` archives must be loaded before append;
 archive replacement is atomic and explicit overwrite requires
 `save(..., overwrite=True)`.
 

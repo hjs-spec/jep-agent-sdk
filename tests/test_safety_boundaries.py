@@ -135,12 +135,11 @@ async def test_cancellation_remains_primary_when_error_recording_fails():
     await entered.wait()
     pending.cancel()
 
-    with pytest.raises(asyncio.CancelledError) as excinfo:
-        await pending
+    with pytest.warns(RuntimeWarning, match="JEP outcome recording failed"):
+        with pytest.raises(asyncio.CancelledError):
+            await pending
 
-    assert isinstance(excinfo.value.__cause__, RecordingError)
-    assert excinfo.value.__cause__.stage == "after_error"
-    assert excinfo.value.__cause__.call_executed is True
+    assert chain.calls == 2
 
 
 def test_existing_storage_requires_load_before_append(tmp_path):
