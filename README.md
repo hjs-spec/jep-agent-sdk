@@ -69,6 +69,12 @@ Path("public-key.pem").write_bytes(key.public_key().public_bytes(
 
 Recording without a key is allowed for local traces, but produces unsigned, unverified records. Use a securely persisted key in a real deployment; this example generates a temporary key.
 
+`@record` records the function name and lifecycle status by default, not raw arguments or return values. Set `capture_values=True` only when those values are intentionally safe to retain. Generator and async-generator functions are rejected because returning an iterator is not the same as completing execution.
+
+If recording fails before invocation, `RecordingError.call_executed` is `False`. If the callable has already completed and completion recording fails, it is `True`; do not blindly retry the business action from that error alone. When the callable itself raises or is cancelled and recording that outcome also fails, the original exception or cancellation remains primary.
+
+Audit archives are written through a same-directory temporary file and atomic replacement. An existing `storage_path` must be loaded before appending, or `save(..., overwrite=True)` must be used explicitly; an unknown existing archive is never silently replaced.
+
 ## Core and companion boundaries
 
 | Concern | Behavior |
@@ -88,7 +94,7 @@ Recording without a key is allowed for local traces, but produces unsigned, unve
 
 The in-memory `JEPVerifier` acceptance store is for a single process. It is not a durable distributed acceptance service. An independently trusted public key must be supplied; `kid` alone does not prove actor identity. Reference resolution, actor binding, domain policy and external effects remain unchecked unless provided by a separate profile or application.
 
-A function failure/cancellation produces a result statement, not a Core Termination event. Async tracing records completion only after the call finishes.
+A function failure/cancellation produces a result statement, not a Core Termination event. Async tracing records completion only after the call finishes. A secondary recording failure never replaces the original business exception or cancellation.
 
 ## Inspect and verify
 
