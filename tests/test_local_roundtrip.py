@@ -59,7 +59,8 @@ def test_documented_core_validator_command_works(tmp_path):
     assert (
         "jep-validate validate ./local-evidence/event.json --keys "
         "./local-evidence/keys.json"
-    ) in readme
+        in readme
+    )
 
     command = shutil.which("jep-validate")
     assert command is not None
