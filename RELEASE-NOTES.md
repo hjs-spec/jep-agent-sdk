@@ -1,3 +1,17 @@
+# Software 2.1.7
+
+This release hardens the maintained JEP Core 0.7 SDK integration boundaries without changing the Core wire format or published protocol semantics.
+
+- Require a trusted public key before the boolean payload-integrity helper can report success; callers that need an explicit missing-key state should use the structured verifier result.
+- Minimize `@record` data capture by default. Raw arguments and return values are only retained with explicit `capture_values=True`.
+- Reject generator and async-generator wrapping instead of reporting completion before iteration has actually finished.
+- Add typed `RecordingError` stage metadata so pre-invocation recording failures and post-execution recording failures are distinguishable. Business exceptions and cancellation remain primary if outcome recording also fails.
+- Make persistent `AuditChain` writes atomic, roll back failed in-memory appends, and refuse to overwrite an unknown existing archive until it is explicitly loaded or overwritten.
+- Allow MCP server integrations to supply an explicit archive path and isolate adapter tests from persistent local files.
+- Align README, API, integration and hardening documentation with these boundaries.
+
+CI covers Python 3.10 through 3.13, package coexistence and the documented viewer container. Existing signed Core 0.7 artifacts remain unchanged.
+
 # Software 2.1.6
 
 The current baseline explicitly decodes JWS protected headers as UTF-8 instead of
