@@ -1,8 +1,8 @@
 """The README local path works across processes and fails closed on tampering."""
 
 import json
-import subprocess
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
