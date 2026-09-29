@@ -36,7 +36,7 @@ An independently implemented Core verifier can check the same files:
 
 ```sh
 python -m pip install jep-core-conformance==0.7.5
-jep-validate ./local-evidence/event.json --keys ./local-evidence/keys.json
+jep-validate validate ./local-evidence/event.json --keys ./local-evidence/keys.json
 ```
 
 These are synthetic demonstration keys. A public key shipped with a record proves

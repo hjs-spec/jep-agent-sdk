@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import shutil
 import sys
 from pathlib import Path
 
@@ -48,3 +49,33 @@ def test_missing_public_key_does_not_claim_success(tmp_path):
     result = run("verify", directory)
     assert result.returncode == 2
     assert "Example failed" in result.stderr
+
+
+def test_documented_core_validator_command_works(tmp_path):
+    directory = tmp_path / "evidence"
+    assert run("create", directory).returncode == 0
+
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    assert (
+        "jep-validate validate ./local-evidence/event.json --keys "
+        "./local-evidence/keys.json"
+    ) in readme
+
+    command = shutil.which("jep-validate")
+    assert command is not None
+    verified = subprocess.run(
+        [
+            command,
+            "validate",
+            str(directory / "event.json"),
+            "--keys",
+            str(directory / "keys.json"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert verified.returncode == 0, verified.stderr
+    result = json.loads(verified.stdout)
+    assert result["status"] == "valid"
+    assert result["checks"]["cryptographic"] == "pass"
