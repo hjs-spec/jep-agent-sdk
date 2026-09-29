@@ -58,8 +58,7 @@ def test_documented_core_validator_command_works(tmp_path):
     readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     assert (
         "jep-validate validate ./local-evidence/event.json --keys "
-        "./local-evidence/keys.json"
-        in readme
+        "./local-evidence/keys.json" in readme
     )
 
     command = shutil.which("jep-validate")
