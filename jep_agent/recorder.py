@@ -47,6 +47,61 @@ class TraceManager:
 trace = TraceManager()
 
 
+
+class RecordingError(RuntimeError):
+    """A JEP recording operation failed around a wrapped callable."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        stage: str,
+        call_executed: bool,
+        event_identity=None,
+        recording_error_type: Optional[str] = None,
+    ):
+        super().__init__(message)
+        self.stage = stage
+        self.call_executed = call_executed
+        self.event_identity = event_identity
+        self.recording_error_type = recording_error_type
+
+
+def _recording_error(
+    exc: Exception,
+    *,
+    stage: str,
+    call_executed: bool,
+    start_event=None,
+) -> RecordingError:
+    identity = None
+    if start_event is not None:
+        try:
+            identity = event_identity_ref(start_event)["value"]
+        except (KeyError, TypeError):
+            identity = None
+
+    if stage == "before_execution":
+        message = "JEP invocation recording failed before the wrapped callable executed"
+    elif stage == "after_execution":
+        message = (
+            "The wrapped callable completed, but JEP completion recording failed; "
+            "do not retry the business action solely because of this recording error"
+        )
+    else:
+        message = (
+            "The wrapped callable raised or was cancelled, and JEP error recording also failed"
+        )
+
+    return RecordingError(
+        message,
+        stage=stage,
+        call_executed=call_executed,
+        event_identity=identity,
+        recording_error_type=type(exc).__name__,
+    )
+
+
 def record(
     func: Callable = None,
     *,
@@ -54,23 +109,34 @@ def record(
     private_key=None,
     chain: Optional[AuditChain] = None,
     auto_verify: bool = True,
+    capture_values: bool = False,
 ):
+    """Record invocation and completion for a synchronous or async callable.
+
+    Arguments and return values are omitted by default. Set capture_values only
+    when retaining those values is explicitly acceptable. Generator and
+    async-generator functions are rejected because returning an iterator is not
+    equivalent to completing its execution.
+    """
     if chain is None:
         chain = AuditChain(issuer=issuer, private_key=private_key)
 
     def decorator(f: Callable) -> Callable:
-        def start(args, kwargs):
-            return chain.append(
-                judge(
-                    who=issuer,
-                    what={
-                        "claim": "function_invocation",
-                        "function": f.__name__,
-                        "args": repr(args),
-                        "kwargs": repr(kwargs),
-                    },
-                )
+        if inspect.isgeneratorfunction(f) or inspect.isasyncgenfunction(f):
+            raise TypeError(
+                "@record does not support generator or async-generator functions; "
+                "record explicit lifecycle events instead"
             )
+
+        def start(args, kwargs):
+            what = {
+                "claim": "function_invocation",
+                "function": f.__name__,
+            }
+            if capture_values:
+                what["args"] = repr(args)
+                what["kwargs"] = repr(kwargs)
+            return chain.append(judge(who=issuer, what=what))
 
         def finish(start_event, result=None, error=None):
             if error is not None:
@@ -86,48 +152,88 @@ def record(
                         ref=event_identity_ref(start_event),
                     )
                 )
+
             if auto_verify:
+                verification_result = {"status": "completed"}
+                if capture_values:
+                    verification_result["result"] = repr(result)
                 return chain.append(
                     verify(
                         who=issuer,
                         ref=event_identity_ref(start_event),
                         verification_scope=["execution_result"],
-                        result={"status": "completed", "result": repr(result)},
+                        result=verification_result,
                     )
                 )
+
+            what = {
+                "claim": "function_result",
+                "function": f.__name__,
+                "status": "completed",
+            }
+            if capture_values:
+                what["result"] = repr(result)
             return chain.append(
                 judge(
                     who=issuer,
-                    what={
-                        "claim": "function_result",
-                        "function": f.__name__,
-                        "status": "completed",
-                        "result": repr(result),
-                    },
+                    what=what,
                     ref=event_identity_ref(start_event),
                 )
             )
 
+        def begin(args, kwargs):
+            try:
+                return start(args, kwargs)
+            except Exception as exc:
+                raise _recording_error(
+                    exc,
+                    stage="before_execution",
+                    call_executed=False,
+                ) from exc
+
+        def finish_success(start_event, result):
+            try:
+                finish(start_event, result=result)
+            except Exception as exc:
+                raise _recording_error(
+                    exc,
+                    stage="after_execution",
+                    call_executed=True,
+                    start_event=start_event,
+                ) from exc
+
+        def finish_error(start_event, original_error):
+            try:
+                finish(start_event, error=original_error)
+            except Exception as exc:
+                recording_error = _recording_error(
+                    exc,
+                    stage="after_error",
+                    call_executed=True,
+                    start_event=start_event,
+                )
+                raise original_error from recording_error
+
         @functools.wraps(f)
         def sync_wrapper(*args, **kwargs):
-            start_event = start(args, kwargs)
+            start_event = begin(args, kwargs)
             try:
                 result = f(*args, **kwargs)
             except BaseException as exc:
-                finish(start_event, error=exc)
+                finish_error(start_event, exc)
                 raise
-            finish(start_event, result=result)
+            finish_success(start_event, result)
             return result
 
         @functools.wraps(f)
         async def async_wrapper(*args, **kwargs):
-            start_event = start(args, kwargs)
+            start_event = begin(args, kwargs)
             try:
                 result = await f(*args, **kwargs)
             except BaseException as exc:
-                finish(start_event, error=exc)
+                finish_error(start_event, exc)
                 raise
-            finish(start_event, result=result)
+            finish_success(start_event, result)
             return result
 
         wrapper = async_wrapper if inspect.iscoroutinefunction(f) else sync_wrapper

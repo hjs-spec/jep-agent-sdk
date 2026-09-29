@@ -22,7 +22,7 @@ from jep_agent.determinability import (
 )
 from jep_agent.extensions.jac import build_jac_event, verify_jac_core
 from jep_agent.primitives import delegate, judge, terminate, verify
-from jep_agent.recorder import record, trace
+from jep_agent.recorder import RecordingError, record, trace
 
 __all__ = [
     "build_event",
@@ -39,6 +39,7 @@ __all__ = [
     "verify",
     "record",
     "trace",
+    "RecordingError",
     "check_determinability",
     "conflict_edges",
     "evidence_cover",

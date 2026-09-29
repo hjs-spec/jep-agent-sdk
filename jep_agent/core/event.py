@@ -365,15 +365,20 @@ def verify_event_signature(
 
 
 def verify_payload_integrity(ev: Mapping[str, Any], public_key=None) -> bool:
-    """Verify shape, and signature integrity when a trusted key is supplied."""
+    """Verify event shape and cryptographic integrity with a trusted public key.
+
+    A signature-shaped string is not evidence of integrity. Callers without a
+    trusted key should use JEPVerifier.verify_result and handle an indeterminate
+    cryptographic result instead of treating syntax as proof.
+    """
+    if public_key is None:
+        return False
+
     try:
         _validate_shape(ev)
     except (TypeError, ValueError):
         return False
 
-    if public_key is None:
-        sig = ev.get("sig")
-        return isinstance(sig, str) and sig.count(".") == 2 and sig.split(".")[1] == ""
     return verify_event_signature(ev, public_key)
 
 
