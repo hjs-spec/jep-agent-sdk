@@ -5,8 +5,8 @@ import pytest
 from jep_agent.adapters.mcp import JEPMCPServer
 
 
-def test_mcp_server():
-    server = JEPMCPServer("test-server")
+def test_mcp_server(tmp_path):
+    server = JEPMCPServer("test-server", storage_path=str(tmp_path / "server.jsonl"))
 
     @server.register
     def add(a: int, b: int) -> int:
@@ -17,8 +17,8 @@ def test_mcp_server():
     assert len(server.export_chain()) == 2  # J + V
 
 
-def test_mcp_error_is_result_statement():
-    server = JEPMCPServer("test-server")
+def test_mcp_error_is_result_statement(tmp_path):
+    server = JEPMCPServer("test-server", storage_path=str(tmp_path / "server.jsonl"))
 
     @server.register
     def fail():

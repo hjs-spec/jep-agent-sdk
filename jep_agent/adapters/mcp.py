@@ -2,7 +2,7 @@
 MCP (Model Context Protocol) adapter for JEP Core 0.7.
 """
 
-from typing import Callable
+from typing import Callable, Optional
 
 from jep_agent.core.chain import AuditChain
 from jep_agent.recorder import record
@@ -18,12 +18,18 @@ class JEPMCPServer:
     MCP server with full JEP integration.
     """
 
-    def __init__(self, server_name: str, issuer: str = "mcp:server", private_key=None):
+    def __init__(
+        self,
+        server_name: str,
+        issuer: str = "mcp:server",
+        private_key=None,
+        storage_path: Optional[str] = None,
+    ):
         self.server_name = server_name
         self.chain = AuditChain(
             issuer=issuer,
             private_key=private_key,
-            storage_path=f"{server_name}_jep_chain.jsonl",
+            storage_path=storage_path or f"{server_name}_jep_chain.jsonl",
         )
 
     def register(self, tool_func: Callable) -> Callable:
