@@ -55,7 +55,7 @@ def test_documented_core_validator_command_works(tmp_path):
     directory = tmp_path / "evidence"
     assert run("create", directory).returncode == 0
 
-    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(\n        encoding="utf-8"\n    )
     assert (
         "jep-validate validate ./local-evidence/event.json --keys "
         "./local-evidence/keys.json"
