@@ -22,7 +22,6 @@ from jep_agent.core.event import (
 CHAIN_EXTENSION = "jep-agent.chain"
 
 
-
 class AuditChain:
     def __init__(self, issuer: str, private_key=None, storage_path: Optional[str] = None):
         self.issuer = issuer
@@ -108,9 +107,7 @@ class AuditChain:
         target = os.fspath(target)
         managed = self._is_storage_target(target)
         if os.path.exists(target):
-            allowed = overwrite or (
-                managed and (self._storage_loaded or self._storage_created)
-            )
+            allowed = overwrite or (managed and (self._storage_loaded or self._storage_created))
             if not allowed:
                 raise FileExistsError(
                     f"Refusing to overwrite existing audit archive: {target}. "

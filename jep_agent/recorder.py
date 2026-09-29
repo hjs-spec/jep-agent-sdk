@@ -47,7 +47,6 @@ class TraceManager:
 trace = TraceManager()
 
 
-
 class RecordingError(RuntimeError):
     """A JEP recording operation failed around a wrapped callable."""
 
