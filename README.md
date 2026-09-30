@@ -1,18 +1,14 @@
 # JEP-Agent SDK 2.1 — JEP Core 0.7
 
-Record signed statements about agent calls and inspect their evidence. The current source implements JEP Core 0.7; historical 2.0.x releases implement the earlier JEP-04/JAC-01 format. See [migration](MIGRATION-0.7.md) before upgrading.
-
-JEP is an individual IETF Internet-Draft, not an IETF-endorsed standard. Valid signatures do not establish factual truth, authorization, legality, successful external execution, or payment readiness.
+Record signed Core 0.7 events about agent calls, export them, and verify their integrity.
 
 ## Install
 
 ```sh
 pip install jep-agent-sdk
-# Optional framework dependencies:
-pip install 'jep-agent-sdk[langchain,openai]'
 ```
 
-For source development, clone this repository and use `pip install -e '.[dev]'`. Imports use `jep_agent`; the command is `jep-agent`, independent of `jep-sdk-py` and `jep-cli`.
+The Python import is `jep_agent`; the command is `jep-agent`.
 
 ## Local create → export → independent verification
 
@@ -27,7 +23,7 @@ python examples/local_roundtrip.py create ./local-evidence
 python examples/local_roundtrip.py verify ./local-evidence
 ```
 
-The second command starts a separate process. The directory contains `event.json`,
+The `verify` command reopens the exported files in a separate process. The directory contains `event.json`,
 `public-key.pem` and `keys.json`; the temporary private key is never exported.
 Verification reports `status: valid`, `cryptographic: pass` and the original
 Event Hash. Existing directories are never overwritten.
@@ -39,10 +35,9 @@ python -m pip install jep-core-conformance==0.7.7
 jep-validate validate ./local-evidence/event.json --keys ./local-evidence/keys.json
 ```
 
-These are synthetic demonstration keys. A public key shipped with a record proves
-signature consistency, not who supplied the record; real actor binding requires
-an independently trusted key/profile. No freshness, policy, completion or payment
-claim is implied. Changing the signed claim causes verification to fail.
+The demonstration uses a temporary key. A public key shipped with a record proves
+signature consistency; identifying a real actor requires an independently trusted
+key/profile. Changing the signed claim causes verification to fail.
 
 ## Signed trace
 
@@ -69,31 +64,11 @@ Path("public-key.pem").write_bytes(key.public_key().public_bytes(
 
 Recording without a key is allowed for local traces, but produces unsigned, unverified records. Use a securely persisted key in a real deployment; this example generates a temporary key.
 
-`@record` records the function name and lifecycle status by default, not raw arguments or return values. Set `capture_values=True` only when those values are intentionally safe to retain. Generator and async-generator functions are rejected because returning an iterator is not the same as completing execution.
+- `@record` retains function names and lifecycle status by default. Enable `capture_values=True` only for arguments and results that are safe to retain.
+- `RecordingError.call_executed=True` means the business call already ran; do not automatically retry it.
+- Load an existing archive before appending. Replacing it requires `save(..., overwrite=True)`.
 
-If recording fails before invocation, `RecordingError.call_executed` is `False`. If the callable has already completed and completion recording fails, it is `True`; do not blindly retry the business action from that error alone. When the callable itself raises or is cancelled and recording that outcome also fails, the original exception or cancellation remains primary.
-
-Audit archives are written through a same-directory temporary file and atomic replacement. An existing `storage_path` must be loaded before appending, or `save(..., overwrite=True)` must be used explicitly; an unknown existing archive is never silently replaced.
-
-## Core and companion boundaries
-
-| Concern | Behavior |
-|---|---|
-| Event Identity | Stable `(who, id)` |
-| Signing payload | RFC 8785 canonical unsigned event |
-| Baseline signature | Detached JWS, `alg: Ed25519`, protected `kid` |
-| Event Hash | SHA-256 of the complete signed artifact, including `sig` |
-| Validation | Independent syntax, cryptographic, extension and requested profile checks |
-| Retry | Same identity and unsigned content returns `already_accepted` |
-| Conflict | Same identity with different unsigned content is rejected |
-| Freshness / audience | Checked only when requested |
-| Unknown critical extension | Rejected before acceptance |
-| Audit-chain linkage | `ext['jep-agent.chain']`; separate from Core `ref` |
-| Task linkage | Local `ext['jep-agent.jac']`; no formal JAC conformance claim |
-
-The in-memory `JEPVerifier` acceptance store is for a single process. It is not a durable distributed acceptance service. An independently trusted public key must be supplied; `kid` alone does not prove actor identity. Reference resolution, actor binding, domain policy and external effects remain unchecked unless provided by a separate profile or application.
-
-A function failure/cancellation produces a result statement, not a Core Termination event. Async tracing records completion only after the call finishes. A secondary recording failure never replaces the original business exception or cancellation.
+See the [integration guide](docs/INTEGRATIONS.md#record-a-callable) for asynchronous calls, unsupported generators and failure handling.
 
 ## Inspect and verify
 
@@ -105,9 +80,32 @@ jep-agent web --port 8080
 
 The CLI checks Core signatures and any local audit-chain links. It does not resolve arbitrary external references. The viewer and HTML export show recorded relationships and **Signed (unverified)** status; visual links do not establish causality or legal responsibility.
 
-Framework adapters are experimental: the OpenAI adapter targets synchronous Chat Completions, and the LangChain auto patch targets historical AgentExecutor APIs. New signed integrations use the [callable recording path](docs/INTEGRATIONS.md).
+<a id="core-and-companion-boundaries"></a>
+
+## Acceptance and local extensions
+
+`JEPVerifier` acceptance state is process-local and is lost on restart. Repeated
+delivery of the same identity and unsigned content returns `already_accepted`;
+different content under the same identity is rejected. For shared durable state,
+use the [reference API](https://github.com/hjs-spec/jep-api#state-and-multi-host-deployment).
+
+The SDK stores audit links in `ext['jep-agent.chain']` and local task links in
+`ext['jep-agent.jac']`. See the [API reference](docs/API.md) for supported checks
+and [Core contract](https://github.com/hjs-spec/jep-core#current-contract) for event semantics.
+
+## Optional framework adapters
+
+The experimental OpenAI adapter targets synchronous Chat Completions; the
+LangChain auto patch targets historical AgentExecutor APIs. Install their extra
+dependencies only when using those adapters:
+
+```sh
+pip install 'jep-agent-sdk[langchain,openai]'
+```
 
 ## Development
+
+From a source checkout:
 
 ```sh
 pip install '.[dev,langchain,openai]' build
