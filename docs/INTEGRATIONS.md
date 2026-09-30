@@ -2,8 +2,10 @@
 
 Use this SDK for local signed Core 0.7 recording. Use the
 [API and HTTP clients](https://github.com/hjs-spec/.github/blob/main/PROJECTS.md#integrate)
-when a service owns signing and shared acceptance state. Start with
-[Quickstart](https://github.com/hjs-spec/jep-quickstart) for the introductory flow.
+when a service owns signing and shared acceptance state. Start with the
+[packaged Core sample](https://github.com/hjs-spec/jep-core#verify-your-first-event)
+to verify an event, then use the [local recorder example](../README.md#local-create--export--independent-verification)
+or [HTTP Quickstart](https://github.com/hjs-spec/jep-quickstart) for your integration.
 
 ## Record a callable
 
