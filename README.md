@@ -20,9 +20,9 @@ No API, account or hosted service is required after installing dependencies.
 The runnable example is maintained in this repository:
 
 ```sh
-git clone --branch v2.1.6 --depth 1 https://github.com/hjs-spec/jep-agent-sdk.git
+git clone --branch v2.1.7 --depth 1 https://github.com/hjs-spec/jep-agent-sdk.git
 cd jep-agent-sdk
-python -m pip install jep-agent-sdk==2.1.6
+python -m pip install jep-agent-sdk==2.1.7
 python examples/local_roundtrip.py create ./local-evidence
 python examples/local_roundtrip.py verify ./local-evidence
 ```
@@ -35,7 +35,7 @@ Event Hash. Existing directories are never overwritten.
 An independently implemented Core verifier can check the same files:
 
 ```sh
-python -m pip install jep-core-conformance==0.7.5
+python -m pip install jep-core-conformance==0.7.7
 jep-validate validate ./local-evidence/event.json --keys ./local-evidence/keys.json
 ```
 
@@ -89,7 +89,6 @@ Audit archives are written through a same-directory temporary file and atomic re
 | Freshness / audience | Checked only when requested |
 | Unknown critical extension | Rejected before acceptance |
 | Audit-chain linkage | `ext['jep-agent.chain']`; separate from Core `ref` |
-| Research helpers | Optional finite-model determinability; outside Core/TSTO validation |
 | Task linkage | Local `ext['jep-agent.jac']`; no formal JAC conformance claim |
 
 The in-memory `JEPVerifier` acceptance store is for a single process. It is not a durable distributed acceptance service. An independently trusted public key must be supplied; `kid` alone does not prove actor identity. Reference resolution, actor binding, domain policy and external effects remain unchecked unless provided by a separate profile or application.
@@ -106,7 +105,7 @@ jep-agent web --port 8080
 
 The CLI checks Core signatures and any local audit-chain links. It does not resolve arbitrary external references. The viewer and HTML export show recorded relationships and **Signed (unverified)** status; visual links do not establish causality or legal responsibility.
 
-Framework adapters are experimental: the OpenAI adapter targets synchronous Chat Completions, and the LangChain auto patch targets historical AgentExecutor APIs. New signed integrations use the [callable recording path](docs/INTEGRATIONS.md). The separate Agents SDK middleware is a retired unsigned observation experiment; it is not the maintained Core integration path.
+Framework adapters are experimental: the OpenAI adapter targets synchronous Chat Completions, and the LangChain auto patch targets historical AgentExecutor APIs. New signed integrations use the [callable recording path](docs/INTEGRATIONS.md).
 
 ## Development
 
