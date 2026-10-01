@@ -16,9 +16,9 @@ No API, account or hosted service is required after installing dependencies.
 The runnable example is maintained in this repository:
 
 ```sh
-git clone --branch v2.1.7 --depth 1 https://github.com/hjs-spec/jep-agent-sdk.git
+git clone --branch v2.1.8 --depth 1 https://github.com/hjs-spec/jep-agent-sdk.git
 cd jep-agent-sdk
-python -m pip install jep-agent-sdk==2.1.7
+python -m pip install jep-agent-sdk==2.1.8
 python examples/local_roundtrip.py create ./local-evidence
 python examples/local_roundtrip.py verify ./local-evidence
 ```

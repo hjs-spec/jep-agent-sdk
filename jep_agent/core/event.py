@@ -210,12 +210,17 @@ def _validate_shape(ev: Mapping[str, Any]) -> None:
             raise ValueError("V requires ref, what.verification_scope, and what.result")
         scopes = what["verification_scope"]
         if not (
-            isinstance(scopes, list)
-            and scopes
-            and all(isinstance(item, str) and item for item in scopes)
-            and len(scopes) == len(set(scopes))
+            (isinstance(scopes, str) and scopes)
+            or (
+                isinstance(scopes, list)
+                and scopes
+                and all(isinstance(item, str) and item for item in scopes)
+                and len(scopes) == len(set(scopes))
+            )
         ):
-            raise ValueError("verification_scope must be a non-empty unique string array")
+            raise ValueError(
+                "verification_scope must be a non-empty string or non-empty unique string array"
+            )
 
 
 def build_event(

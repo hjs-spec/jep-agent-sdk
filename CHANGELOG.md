@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.8
+
+- Align V scope validation with the current Core 0.7 string and array forms without rewriting signatures.
+- Cover the official string fixture and use Core verifier 0.7.7 in CI and release checks.
+- Add explicit contribution and private security-report routes.
+
 ## 2.1.7
 
 - Require a trusted key for boolean payload-integrity success.

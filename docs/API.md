@@ -1,6 +1,6 @@
 # Core 0.7 API
 
-- `build_event(verb, who, what, *, event_id=None, aud=None, ref=None, ext=None, ext_crit=None, when=None)` creates an unsigned event. J requires a claim; D requires `delegatee` and `scope`; T requires a reference and `termination_scope`; V requires a reference, `verification_scope` and `result`.
+- `build_event(verb, who, what, *, event_id=None, aud=None, ref=None, ext=None, ext_crit=None, when=None)` creates an unsigned event. J requires a claim; D requires `delegatee` and `scope`; T requires a reference and `termination_scope`; V requires a reference, `verification_scope` and `result`. `verification_scope` accepts a nonempty string or a nonempty array of unique nonempty strings. Verification preserves the signed representation.
 - `sign_event(event, private_key, *, kid=None)` returns a signed copy. The protected header uses Ed25519 and a key identifier.
 - `canonicalize(event)` returns unsigned JCS bytes. `event_hash(event)` hashes the complete signed artifact.
 - `event_identity_ref(event)` in `jep_agent.core.event` builds a typed `(who,id)` reference.

@@ -48,11 +48,41 @@ def test_producer_accepted_by_independent_core_validator():
         ("D", {"delegatee": "agent:b", "scope": {}}, {}),
         ("T", {"termination_scope": "future_reliance"}, {"ref": ref}),
         ("V", {"verification_scope": ["syntax"], "result": {"status": "pass"}}, {"ref": ref}),
+        ("V", {"verification_scope": "cryptographic", "result": "pass"}, {"ref": ref}),
     ]:
         event = sign_event(build_event(verb, who, body, **options), key)
         result = core.validate_event(event, keys={f"{who}#key-1": jwk})
         assert result["status"] == "valid", result
         assert core.event_hash(event) == event_hash(event)
+
+
+def test_published_string_scope_vector_keeps_signature_and_event_hash():
+    fixtures = Path(__file__).parent / "fixtures/core-v07"
+    raw = (fixtures / "V-string-scope.json").read_text()
+    event = parse_json(raw)
+    keys = json.loads((fixtures / "keys.json").read_text())
+    key = Ed25519PublicKey.from_public_bytes(
+        base64.urlsafe_b64decode(keys["byoi-key-1"]["x"] + "==")
+    )
+    result = JEPVerifier().verify_result(event, key)
+    assert result["status"] == "valid", result
+    assert event == json.loads(raw)
+    assert event_hash(event) == (
+        "sha256:95d6d17f3fb530c282251eb8c0b9d3885dbc25f6ae01a782390bc7ad98e30765"
+    )
+    event["what"]["verification_scope"] = ["cryptographic"]
+    assert not verify_event_signature(event, key)
+
+
+@pytest.mark.parametrize("scope", ["", [], [""], ["syntax", "syntax"], [1], {}, None])
+def test_invalid_v_scopes_still_rejected(scope):
+    with pytest.raises(ValueError, match="verification_scope"):
+        build_event(
+            "V",
+            "actor",
+            {"verification_scope": scope, "result": "pass"},
+            ref={"type": "jep:event", "value": {"who": "actor", "id": "target"}},
+        )
 
 
 @pytest.mark.parametrize(

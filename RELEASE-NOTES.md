@@ -1,3 +1,12 @@
+# Software 2.1.8
+
+- Accept both Core 0.7 V `verification_scope` forms: a nonempty string or a nonempty unique string array. Preserve the signed representation and original Event Hash.
+- Verify the published BYOI string-scope fixture and both producer forms against Core verifier 0.7.7; malformed scopes remain rejected.
+- Use the released Core verifier consistently in CI and release validation, including the documented CLI roundtrip.
+- Link contribution and private security-report routes from the SDK guide.
+
+Core 0.7 semantics, frozen specification snapshots and existing signed fixtures are unchanged.
+
 # Software 2.1.7
 
 This release hardens the maintained JEP Core 0.7 SDK integration boundaries without changing the Core wire format or published protocol semantics.

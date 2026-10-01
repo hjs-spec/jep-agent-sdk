@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install build twine -e '.[dev]'
+      - run: pip install build twine jep-core-conformance==0.7.7 -e '.[dev]'
       - run: python -m compileall -q jep_agent tests
       - run: ruff check jep_agent tests && black --check jep_agent tests
       - run: python -m pytest tests -q
