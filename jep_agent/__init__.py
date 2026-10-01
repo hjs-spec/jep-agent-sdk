@@ -48,4 +48,4 @@ __all__ = [
     "verify_jac_core",
 ]
 
-__version__ = "2.1.7"
+__version__ = "2.1.8"

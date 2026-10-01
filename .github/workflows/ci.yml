@@ -33,7 +33,7 @@ jobs:
         pip install -e ".[langchain,openai]"
 
     - name: Install pinned independent Core validator
-      run: pip install "jep-core-conformance @ git+https://github.com/hjs-spec/jep-core.git@de3b49d8d169ed505b114122b322dcf5f096394d"
+      run: pip install jep-core-conformance==0.7.7
 
     - name: Check package syntax
       run: python -m compileall -q jep_agent tests
